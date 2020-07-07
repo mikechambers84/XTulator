@@ -46,6 +46,7 @@ void port_write(CPU_t* cpu, uint16_t portnum, uint8_t value) {
 #ifdef DEBUG_PORTS
 	debug_log(DEBUG_DETAIL, "port_write @ %03X <- %02X\r\n", portnum, value);
 #endif
+	portnum &= 0x0FFF;
 	if (portnum == 0x80) {
 		debug_log(DEBUG_DETAIL, "Diagnostic port out: %02X\r\n", value);
 	}
@@ -56,6 +57,7 @@ void port_write(CPU_t* cpu, uint16_t portnum, uint8_t value) {
 }
 
 void port_writew(CPU_t* cpu, uint16_t portnum, uint16_t value) {
+	portnum &= 0x0FFF;
 	if (portnum == 0x80) {
 		debug_log(DEBUG_DETAIL, "Diagnostic port out: %04X\r\n", value);
 	}
@@ -71,6 +73,7 @@ uint8_t port_read(CPU_t* cpu, uint16_t portnum) {
 #ifdef DEBUG_PORTS
 	debug_log(DEBUG_DETAIL, "port_read @ %03X\r\n", portnum);
 #endif
+	portnum &= 0x0FFF;
 	if (ports_cbReadB[portnum] != NULL) {
 		return (*ports_cbReadB[portnum])(ports_udata[portnum], portnum);
 	}
@@ -80,6 +83,7 @@ uint8_t port_read(CPU_t* cpu, uint16_t portnum) {
 
 uint16_t port_readw(CPU_t* cpu, uint16_t portnum) {
 	uint16_t ret;
+	portnum &= 0x0FFF;
 	if (ports_cbReadW[portnum] != NULL) {
 		return (*ports_cbReadW[portnum])(ports_udata[portnum], portnum);
 	}

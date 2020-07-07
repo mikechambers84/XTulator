@@ -97,8 +97,8 @@ int vga_init() {
 		if (vga_RAM[i] == NULL) break;
 	}
 	if (i < 4) { //If there was an allocation error
-		for (; i >= 0; i--) {
-			free((void*)vga_RAM[i]);
+		for (; i >= 0; i--) { //step back through any successfully allocated chunks
+			free((void*)vga_RAM[i]); //and free them
 		}
 		return -1;
 	}

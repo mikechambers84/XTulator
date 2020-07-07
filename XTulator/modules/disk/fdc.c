@@ -414,6 +414,8 @@ int fdc_insert(FDC_t* fdc, uint8_t num, char* dfile) {
 #ifdef DEBUG_FDC
 	debug_log(DEBUG_DETAIL, "[FDC] Inserted floppy: %s (%lu KB)\r\n", dfile, fdc->disk[num].size >> 10);
 #endif
+
+	return 0;
 }
 
 int fdc_init(FDC_t* fdc, CPU_t* cpu, I8259_t* i8259, I8237_t* i8237) {

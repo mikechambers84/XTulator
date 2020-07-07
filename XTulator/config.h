@@ -4,13 +4,13 @@
 #include <stdint.h>
 
 #define STR_TITLE "XTulator"
-#define STR_VERSION "0.20.7.6"
+#define STR_VERSION "0.20.7.7"
 
 //#define DEBUG_DMA
 //#define DEBUG_VGA
 //#define DEBUG_CGA
 //#define DEBUG_PIT
-#define DEBUG_PIC
+//#define DEBUG_PIC
 //#define DEBUG_PPI
 //#define DEBUG_UART
 //#define DEBUG_TCPMODEM
@@ -36,8 +36,6 @@
 #define SAMPLE_RATE		48000
 #define SAMPLE_BUFFER	4800
 //There are two alternating sample buffers, each of this size
-
-//#define IBM_XT_BIOS
 
 #ifdef _WIN32
 #define FUNC_INLINE __forceinline

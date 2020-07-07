@@ -96,7 +96,7 @@ uint8_t uart_readport(UART_t* uart, uint16_t addr) {
 	switch (addr) {
 	case 0x00:
 		if (uart->dlab == 0) {
-			ret = uart->rxnew ? uart->rx : 0x00;
+			ret = uart->rx;
 			uart->rxnew = 0;
 			uart->pendirq &= ~UART_PENDING_RX;
 			if (uart->ien & UART_IRQ_LSR_ENABLE) {

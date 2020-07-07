@@ -81,7 +81,6 @@ void biosdisk_eject(CPU_t* cpu, uint8_t drivenum) {
 	biosdisk[drivenum].inserted = 0;
 	if ((drivenum >= 2) && (biosdisk_hdcount > 0)) {
 		biosdisk_hdcount--;
-		cpu_write(cpu, 0x475, biosdisk_hdcount);
 	}
 	if (biosdisk[drivenum].diskfile != NULL) fclose(biosdisk[drivenum].diskfile);
 }
