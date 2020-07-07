@@ -1,0 +1,27 @@
+--Rough notes on things still to be done--
+
+Make configure script for Linux and MacOS.
+
+Complete UART.
+
+Complete TCP modem.
+
+Implement all DMA modes and fix bugs.
+
+Fix remaining bugs in EGA/VGA.
+
+Legit IDE controller and XT-IDE BIOS ROM.
+
+Legit floppy controller.
+
+MFM controller??
+
+Sound Blaster 2.0 high speed DMA mode, and fix glitches in certain games.
+
+Make OPL2 not suck so bad/be completely broken.
+
+Figure out why mouse doesn't work in Windows 3.0.
+
+Novel NE2000 support.
+
+Fix chipset bugs that causes most BIOSes to not boot.

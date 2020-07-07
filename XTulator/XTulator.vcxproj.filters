@@ -1,0 +1,234 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\cpu">
+      <UniqueIdentifier>{bf103401-0663-4f12-95ea-cace8ecb9897}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\cpu">
+      <UniqueIdentifier>{fdadc56d-c42e-4c8d-a293-712a0247b954}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\chipset">
+      <UniqueIdentifier>{efc1f185-55dd-4e54-a58e-a47a289b5bac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\chipset">
+      <UniqueIdentifier>{8efeb712-905f-42bb-af79-9c072a20f93b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules">
+      <UniqueIdentifier>{9c9ad04c-d2cd-401b-8b91-66902129fba8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\video">
+      <UniqueIdentifier>{f2f0e491-b554-4d7e-b6e4-123d9803ee99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\modules">
+      <UniqueIdentifier>{a44f6679-836a-4b0a-8a89-ef00e3a73976}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\modules\video">
+      <UniqueIdentifier>{b097e4e1-b99b-45bf-a278-034c4466ce4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\disk">
+      <UniqueIdentifier>{ea658897-8f43-4848-95f0-c4c0f592d1b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\modules\disk">
+      <UniqueIdentifier>{79052ac5-df15-48d8-b15b-55b2e3204608}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\input">
+      <UniqueIdentifier>{e85a1a52-dfab-4f66-b0c0-f0cdf3aa2606}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\modules\input">
+      <UniqueIdentifier>{110f8868-fe40-4b0a-819c-055b67af4468}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio">
+      <UniqueIdentifier>{2ef550bc-0467-4093-b106-23e553cf64c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\modules\audio">
+      <UniqueIdentifier>{86a0dc4c-5e1a-4b4a-81d8-633922dd2bc7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\io">
+      <UniqueIdentifier>{f2b9ce14-f016-48ea-aa83-dd4e3836322a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\modules\io">
+      <UniqueIdentifier>{de0d3374-1dea-4ac7-a9a1-5b8cb4758adb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cpu\cpu.c">
+      <Filter>Source Files\cpu</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chipset\i8259.c">
+      <Filter>Source Files\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="chipset\i8253.c">
+      <Filter>Source Files\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\disk\biosdisk.c">
+      <Filter>Source Files\modules\disk</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\video\sdlconsole.c">
+      <Filter>Source Files\modules\video</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\video\cga.c">
+      <Filter>Source Files\modules\video</Filter>
+    </ClCompile>
+    <ClCompile Include="timing.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="memory.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ports.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="utility.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="chipset\i8237.c">
+      <Filter>Source Files\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="chipset\i8255.c">
+      <Filter>Source Files\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\video\vga.c">
+      <Filter>Source Files\modules\video</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\audio\sdlaudio.c">
+      <Filter>Source Files\modules\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\audio\pcspeaker.c">
+      <Filter>Source Files\modules\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="debuglog.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="args.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\audio\opl2.c">
+      <Filter>Source Files\modules\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\audio\blaster.c">
+      <Filter>Source Files\modules\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="chipset\uart.c">
+      <Filter>Source Files\chipset</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\input\mouse.c">
+      <Filter>Source Files\modules\input</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\io\tcpmodem.c">
+      <Filter>Source Files\modules\io</Filter>
+    </ClCompile>
+    <ClCompile Include="rtc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="machine.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\disk\fdc.c">
+      <Filter>Source Files\modules\disk</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cpu\cpu.h">
+      <Filter>Header Files\cpu</Filter>
+    </ClInclude>
+    <ClInclude Include="cpu\cpuconf.h">
+      <Filter>Header Files\cpu</Filter>
+    </ClInclude>
+    <ClInclude Include="chipset\i8259.h">
+      <Filter>Header Files\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="chipset\i8253.h">
+      <Filter>Header Files\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\disk\biosdisk.h">
+      <Filter>Header Files\modules\disk</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\input\input.h">
+      <Filter>Header Files\modules\input</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\video\sdlconsole.h">
+      <Filter>Header Files\modules\video</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\video\cga.h">
+      <Filter>Header Files\modules\video</Filter>
+    </ClInclude>
+    <ClInclude Include="timing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="utility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\input\sdlkeys.h">
+      <Filter>Header Files\modules\input</Filter>
+    </ClInclude>
+    <ClInclude Include="chipset\i8237.h">
+      <Filter>Header Files\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="chipset\i8255.h">
+      <Filter>Header Files\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\video\vga.h">
+      <Filter>Header Files\modules\video</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\audio\sdlaudio.h">
+      <Filter>Header Files\modules\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\audio\pcspeaker.h">
+      <Filter>Header Files\modules\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="ports.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="debuglog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="args.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\audio\opl2.h">
+      <Filter>Header Files\modules\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\audio\blaster.h">
+      <Filter>Header Files\modules\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="chipset\uart.h">
+      <Filter>Header Files\chipset</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\io\tcpmodem.h">
+      <Filter>Header Files\modules\io</Filter>
+    </ClInclude>
+    <ClInclude Include="rtc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\input\mouse.h">
+      <Filter>Header Files\modules\input</Filter>
+    </ClInclude>
+    <ClInclude Include="machine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\disk\fdc.h">
+      <Filter>Header Files\modules\disk</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
