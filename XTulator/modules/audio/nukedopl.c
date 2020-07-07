@@ -1384,7 +1384,15 @@ int16_t OPL3_getSample(opl3_chip* chip) {
 }
 
 void OPL3_write(opl3_chip* chip, uint32_t portnum, uint8_t value) {
-    OPL3_WriteReg(chip, (Bit16u)portnum, value);
+    static Bit16u port;
+    switch (portnum) {
+    case 0x388:
+        port = value;
+        break;
+    case 0x389:
+        OPL3_WriteReg(chip, (Bit16u)port, value);
+        break;
+    }
 }
 
 void OPL3_init(opl3_chip* chip) {

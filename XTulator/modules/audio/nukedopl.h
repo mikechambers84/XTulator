@@ -28,7 +28,7 @@
 
 #ifndef OPL_OPL3_H
 #define OPL_OPL3_H
-#define OPL_WRITEBUF_SIZE   1 //was 1024
+#define OPL_WRITEBUF_SIZE   1024
 #define OPL_WRITEBUF_DELAY  1
 
 #include "../../config.h"
