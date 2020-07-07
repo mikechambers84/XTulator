@@ -131,7 +131,7 @@ uint8_t i8259_nextintr(I8259_t* i8259) {
 	tmpirr = i8259->irr & (~i8259->imr); //AND request register with inverted mask register
 	for (i = 0; i < 8; i++)
 		if ((tmpirr >> i) & 1) {
-			//i8259->irr ^= (1 << i);
+			i8259->irr &= ~(1 << i);
 			i8259->isr |= (1 << i);
 			return(i8259->icw[2] + i);
 		}
