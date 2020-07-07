@@ -45,6 +45,8 @@ double speed = 0;
 
 volatile uint8_t running = 1;
 
+MACHINE_t machine;
+
 void optimer(void* dummy) {
 	ops /= 10000;
 	if (showMIPS) {
@@ -68,7 +70,7 @@ int main(int argc, char *argv[]) {
 	timing_init();
 	memory_init();
 
-	if (args_parse(argc, argv)) {
+	if (args_parse(&machine, argc, argv)) {
 		return -1;
 	}
 
@@ -77,11 +79,11 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	if (sdlaudio_init()) {
+	if (sdlaudio_init(&machine)) {
 		debug_log(DEBUG_INFO, "[WARNING] SDL audio initialization failure\r\n");
 	}
 
-	if (machine_init(usemachine) < 0) {
+	if (machine_init(&machine, usemachine) < 0) {
 		debug_log(DEBUG_ERROR, "[ERROR] Machine initialization failure\r\n");
 		return -1;
 	}
@@ -108,8 +110,8 @@ int main(int argc, char *argv[]) {
 			goCPU = 1;
 		}
 		if (goCPU) {
-			cpu_interruptCheck(&myCPU, &i8259);
-			cpu_exec(&myCPU, instructionsperloop);
+			cpu_interruptCheck(&machine.CPU, &machine.i8259);
+			cpu_exec(&machine.CPU, instructionsperloop);
 			ops += instructionsperloop;
 			goCPU = 0;
 		}
@@ -117,9 +119,9 @@ int main(int argc, char *argv[]) {
 		if (++curloop == 100) { //don't do this too often, it seems to be expensive
 			switch (sdlconsole_loop()) {
 			case SDLCONSOLE_EVENT_KEY:
-				myKey.scancode = sdlconsole_getScancode();
-				myKey.isNew = 1;
-				i8259_doirq(&i8259, 1);
+				machine.KeyState.scancode = sdlconsole_getScancode();
+				machine.KeyState.isNew = 1;
+				i8259_doirq(&machine.i8259, 1);
 				break;
 			case SDLCONSOLE_EVENT_QUIT:
 				running = 0;

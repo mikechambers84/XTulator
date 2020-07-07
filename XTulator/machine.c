@@ -50,7 +50,7 @@
 /*
 	ID string, full description, init function
 */
-const MACHINE_t machine_defs[] = {
+const MACHINEDEF_t machine_defs[] = {
 	{ "generic_xt", "Generic XT clone with VGA, speed unlimited", machine_init_generic_xt, VIDEO_CARD_VGA, -1 },
 	{ "ibm_xt", "IBM XT", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77 },
 	{ "ami_xt", "AMI XT clone", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77 },
@@ -132,39 +132,26 @@ const MACHINEMEM_t machine_mem[][10] = {
 	},
 };
 
-CPU_t myCPU;
-I8259_t i8259;
-I8253_t i8253;
-I8237_t i8237;
-I8255_t i8255;
-UART_t UART[2];
-OPL2_t OPL2;
-BLASTER_t blaster;
-KeyState myKey;
-FDC_t fdc;
-
-#ifdef ENABLE_TCP_MODEM
-TCPMODEM_t tcpmodem[2];
-#endif
-
 extern double speed;
 
-int machine_init_generic_xt() {
-	i8259_init(&i8259);
-	i8253_init(&i8253, &i8259);
-	i8237_init(&i8237, &myCPU);
-	i8255_init(&i8255, &myKey);
-	pcspeaker_init();
-	opl2_init(&OPL2);
-	blaster_init(&blaster, &i8237, &i8259, 0x220, 1, 5);
-	cpu_reset(&myCPU);
+int machine_init_generic_xt(MACHINE_t* machine) {
+	if (machine == NULL) return -1;
+
+	i8259_init(&machine->i8259);
+	i8253_init(&machine->i8253, &machine->i8259, &machine->pcspeaker);
+	i8237_init(&machine->i8237, &machine->CPU);
+	i8255_init(&machine->i8255, &machine->KeyState, &machine->pcspeaker);
+	pcspeaker_init(&machine->pcspeaker);
+	opl2_init(&machine->OPL2);
+	blaster_init(&machine->blaster, &machine->i8237, &machine->i8259, 0x220, 1, 5);
+	cpu_reset(&machine->CPU);
 #ifndef USE_DISK_HLE
-	fdc_init(&fdc, &myCPU, &i8259, &i8237);
+	fdc_init(&fdc, &machine->CPU, &i8259, &i8237);
 	fdc_insert(&fdc, 0, "dos622.img");
 #else
-	biosdisk_init(&myCPU);
+	biosdisk_init(&machine->CPU);
 #endif
-	rtc_init(&myCPU);
+	rtc_init(&machine->CPU);
 
 	switch (videocard) {
 	case VIDEO_CARD_CGA:
@@ -180,53 +167,53 @@ int machine_init_generic_xt() {
 	return 0;
 }
 
-int machine_init(char* id) {
-	int machine = 0, match = 0, i = 0;
+int machine_init(MACHINE_t* machine, char* id) {
+	int num = 0, match = 0, i = 0;
 
 	do {
-		if (machine_defs[machine].id == NULL) {
+		if (machine_defs[num].id == NULL) {
 			debug_log(DEBUG_ERROR, "[MACHINE] ERROR: Machine definition not found: %s\r\n", id);
 			return -1;
 		}
 
-		if (_stricmp(id, machine_defs[machine].id) == 0) {
+		if (_stricmp(id, machine_defs[num].id) == 0) {
 			match = 1;
 		}
 		else {
-			machine++;
+			num++;
 		}
 	} while (!match);
 
-	debug_log(DEBUG_INFO, "[MACHINE] Initializing machine: \"%s\" (%s)\r\n", machine_defs[machine].description, machine_defs[machine].id);
+	debug_log(DEBUG_INFO, "[MACHINE] Initializing machine: \"%s\" (%s)\r\n", machine_defs[num].description, machine_defs[num].id);
 
 	//Initialize machine memory map
 	while(1) {
 		uint8_t* temp;
-		if (machine_mem[machine][i].memtype == MACHINE_MEM_ENDLIST) {
+		if (machine_mem[num][i].memtype == MACHINE_MEM_ENDLIST) {
 			break;
 		}
-		temp = (uint8_t*)malloc((size_t)machine_mem[machine][i].size);
+		temp = (uint8_t*)malloc((size_t)machine_mem[num][i].size);
 		if ((temp == NULL) &&
-			((machine_mem[machine][i].required == MACHINE_ROM_REQUIRED) || (machine_mem[machine][i].required == MACHINE_ROM_ISNOTROM))) {
-			debug_log(DEBUG_ERROR, "[MACHINE] ERROR: Unable to allocate %lu bytes of memory\r\n", machine_mem[machine][i].size);
+			((machine_mem[num][i].required == MACHINE_ROM_REQUIRED) || (machine_mem[num][i].required == MACHINE_ROM_ISNOTROM))) {
+			debug_log(DEBUG_ERROR, "[MACHINE] ERROR: Unable to allocate %lu bytes of memory\r\n", machine_mem[num][i].size);
 			return -1;
 		}
-		if (machine_mem[machine][i].memtype == MACHINE_MEM_RAM) {
-			memory_mapRegister(machine_mem[machine][i].start, machine_mem[machine][i].size, temp, temp);
-		} else if (machine_mem[machine][i].memtype == MACHINE_MEM_ROM) {
+		if (machine_mem[num][i].memtype == MACHINE_MEM_RAM) {
+			memory_mapRegister(machine_mem[num][i].start, machine_mem[num][i].size, temp, temp);
+		} else if (machine_mem[num][i].memtype == MACHINE_MEM_ROM) {
 			int ret;
-			ret = utility_loadFile(temp, machine_mem[machine][i].size, machine_mem[machine][i].filename);
-			if ((machine_mem[machine][i].required == MACHINE_ROM_REQUIRED) && ret) {
-				debug_log(DEBUG_ERROR, "[MACHINE] Could not open file, or size is less than expected: %s\r\n", machine_mem[machine][i].filename);
+			ret = utility_loadFile(temp, machine_mem[num][i].size, machine_mem[num][i].filename);
+			if ((machine_mem[num][i].required == MACHINE_ROM_REQUIRED) && ret) {
+				debug_log(DEBUG_ERROR, "[MACHINE] Could not open file, or size is less than expected: %s\r\n", machine_mem[num][i].filename);
 				return -1;
 			}
-			memory_mapRegister(machine_mem[machine][i].start, machine_mem[machine][i].size, temp, NULL);
+			memory_mapRegister(machine_mem[num][i].start, machine_mem[num][i].size, temp, NULL);
 		}
 		i++;
 	}
 
 	if (videocard == 0xFF) {
-		videocard = machine_defs[machine].video;
+		videocard = machine_defs[num].video;
 	}
 
 	if (speedarg > 0) {
@@ -234,14 +221,14 @@ int machine_init(char* id) {
 	} else if (speedarg < 0) {
 		speed = -1;
 	} else {
-		speed = machine_defs[machine].speed;
+		speed = machine_defs[num].speed;
 	}
 
-	if ((*machine_defs[machine].init)()) { //call machine-specific init routine
+	if ((*machine_defs[num].init)(machine)) { //call machine-specific init routine
 		return -1;
 	}
 
-	return machine;
+	return num;
 }
 
 void machine_list() {

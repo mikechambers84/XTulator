@@ -12,6 +12,8 @@
 #include "modules/io/tcpmodem.h"
 #include "modules/audio/opl2.h"
 #include "modules/audio/blaster.h"
+#include "modules/audio/pcspeaker.h"
+#include "modules/disk/fdc.h"
 #include "modules/input/input.h"
 
 #define MACHINE_MEM_RAM			0
@@ -21,6 +23,23 @@
 #define MACHINE_ROM_OPTIONAL	0
 #define MACHINE_ROM_REQUIRED	1
 #define MACHINE_ROM_ISNOTROM	2
+
+typedef struct {
+	CPU_t CPU;
+	I8259_t i8259;
+	I8253_t i8253;
+	I8237_t i8237;
+	I8255_t i8255;
+	UART_t UART[2];
+#ifdef ENABLE_TCP_MODEM
+	TCPMODEM_t tcpmodem[2];
+#endif
+	OPL2_t OPL2;
+	BLASTER_t blaster;
+	PCSPEAKER_t pcspeaker;
+	KEYSTATE_t KeyState;
+	FDC_t fdc;
+} MACHINE_t;
 
 typedef struct {
 	uint8_t memtype;
@@ -33,28 +52,13 @@ typedef struct {
 typedef struct {
 	char* id;
 	char* description;
-	int (*init)();
+	int (*init)(MACHINE_t* machine);
 	uint8_t video;
 	double speed;
-} MACHINE_t;
+} MACHINEDEF_t;
 
-extern CPU_t myCPU;
-extern I8259_t i8259;
-extern I8253_t i8253;
-extern I8237_t i8237;
-extern I8255_t i8255;
-extern UART_t UART[2];
-extern OPL2_t OPL2;
-extern BLASTER_t blaster;
-extern KeyState myKey;
-
-#ifdef ENABLE_TCP_MODEM
-extern TCPMODEM_t tcpmodem[2];
-#endif
-
-
-int machine_init_generic_xt();
-int machine_init(char* id);
+int machine_init_generic_xt(MACHINE_t* machine);
+int machine_init(MACHINE_t* machine, char* id);
 void machine_list();
 
 #endif

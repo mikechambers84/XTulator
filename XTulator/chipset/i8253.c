@@ -145,7 +145,7 @@ void i8253_tickCallback(I8253CB_t* i8253cb) {
 	i8253 = i8253cb->i8253;
 	i8259 = i8253cb->i8259;
 	for (i = 0; i < 3; i++) {
-		if ((i == 2) && (i8253->mode[2] != 3)) pcspeaker_setGateState(PC_SPEAKER_GATE_TIMER2, 0);
+		if ((i == 2) && (i8253->mode[2] != 3)) pcspeaker_setGateState(i8253->cbdata.pcspeaker, PC_SPEAKER_GATE_TIMER2, 0);
 		if (i8253->active[i]) switch (i8253->mode[i]) {
 		case 0: //interrupt on terminal count
 			i8253->counter[i] -= 25;
@@ -172,7 +172,7 @@ void i8253_tickCallback(I8253CB_t* i8253cb) {
 				if (i8253->out[i] == 0) {
 					if (i == 0) i8253_timerCallback0(i8259);
 				}
-				if (i == 2) pcspeaker_setGateState(PC_SPEAKER_GATE_TIMER2, (i8253->reload[i] < 50) ? 0 : i8253->out[i]);
+				if (i == 2) pcspeaker_setGateState(i8253->cbdata.pcspeaker, PC_SPEAKER_GATE_TIMER2, (i8253->reload[i] < 50) ? 0 : i8253->out[i]);
 				i8253->counter[i] += i8253->reload[i];
 			}
 			break;
@@ -185,11 +185,12 @@ void i8253_tickCallback(I8253CB_t* i8253cb) {
 	}
 }
 
-void i8253_init(I8253_t* i8253, I8259_t* i8259) {
+void i8253_init(I8253_t* i8253, I8259_t* i8259, PCSPEAKER_t* pcspeaker) {
 	memset(i8253, 0, sizeof(I8253_t));
 
 	i8253->cbdata.i8253 = i8253;
 	i8253->cbdata.i8259 = i8259;
+	i8253->cbdata.pcspeaker = pcspeaker;
 
 	timing_addTimer(i8253_tickCallback, (void*)(&i8253->cbdata), 48000, TIMING_ENABLED); //79545.47
 

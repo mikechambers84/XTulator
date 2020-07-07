@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include "i8259.h"
+#include "../modules/audio/pcspeaker.h"
 
 #define PIT_MODE_LATCHCOUNT	0
 #define PIT_MODE_LOBYTE	1
@@ -31,6 +32,7 @@
 typedef struct {
 	void* i8253;
 	I8259_t* i8259;
+	PCSPEAKER_t* pcspeaker;
 } I8253CB_t;
 
 typedef struct {
@@ -54,6 +56,6 @@ typedef struct {
 
 void i8253_write(I8253_t* i8253, uint16_t portnum, uint8_t value);
 uint8_t i8253_read(I8253_t* i8253, uint16_t portnum);
-void i8253_init(I8253_t* i8253, I8259_t* i8259);
+void i8253_init(I8253_t* i8253, I8259_t* i8259, PCSPEAKER_t* pcspeaker);
 
 #endif

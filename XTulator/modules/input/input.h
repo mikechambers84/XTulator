@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-typedef struct KeyState_s {
+typedef struct {
 	uint8_t scancode;
 	uint8_t isNew;
-} KeyState;
+} KEYSTATE_t;
 
 #endif

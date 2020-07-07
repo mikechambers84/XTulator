@@ -6,8 +6,9 @@
 #else
 #include <SDL.h>
 #endif
+#include "../../machine.h"
 
-int sdlaudio_init();
+int sdlaudio_init(MACHINE_t* machine);
 void sdlaudio_generateSample(void* dummy);
 
 #endif

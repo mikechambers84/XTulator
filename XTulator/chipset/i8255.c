@@ -65,17 +65,17 @@ void i8255_writeport(I8255_t* i8255, uint16_t portnum, uint8_t value) {
 		break;
 	case 1:
 		if (value & 0x01) {
-			pcspeaker_selectGate(PC_SPEAKER_USE_TIMER2);
+			pcspeaker_selectGate(i8255->pcspeaker, PC_SPEAKER_USE_TIMER2);
 #ifdef DEBUG_PPI
 			debug_log(DEBUG_DETAIL, "[I8255] Speaker take input from timer 2\r\n");
 #endif
 		} else {
-			pcspeaker_selectGate(PC_SPEAKER_USE_DIRECT);
+			pcspeaker_selectGate(i8255->pcspeaker, PC_SPEAKER_USE_DIRECT);
 #ifdef DEBUG_PPI
 			debug_log(DEBUG_DETAIL, "[I8255] Speaker take input from direct\r\n");
 #endif
 		}
-		pcspeaker_setGateState(PC_SPEAKER_GATE_DIRECT, (value >> 1) & 1);
+		pcspeaker_setGateState(i8255->pcspeaker, PC_SPEAKER_GATE_DIRECT, (value >> 1) & 1);
 #ifdef DEBUG_PPI
 		debug_log(DEBUG_DETAIL, "[I8255] Speaker direct value = %u\r\n", (value >> 1) & 1);
 #endif
@@ -94,9 +94,11 @@ void i8255_refreshToggle(I8255_t* i8255) {
 	i8255->portB ^= 0x10; //simulate DRAM refresh toggle, many BIOSes require this...
 }
 
-void i8255_init(I8255_t* i8255, KeyState* keystate) {
+void i8255_init(I8255_t* i8255, KEYSTATE_t* keystate, PCSPEAKER_t* pcspeaker) {
 	memset(i8255, 0, sizeof(I8255_t));
 	i8255->keystate = keystate;
+	i8255->pcspeaker = pcspeaker;
+
 	if (videocard == VIDEO_CARD_VGA) {
 		i8255->sw2 = 0x46;
 	}

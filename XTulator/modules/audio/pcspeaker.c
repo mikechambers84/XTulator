@@ -20,55 +20,55 @@
 #include "../../config.h"
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include "pcspeaker.h"
 #include "../../timing.h"
 
-uint8_t pcspeaker_gateSelect = PC_SPEAKER_USE_DIRECT, pcspeaker_gate[2] = { 0, 0 };
-int16_t pcspeaker_amplitude = 0;
-
-void pcspeaker_setGateState(uint8_t gate, uint8_t value) {
-	pcspeaker_gate[gate] = value;
+void pcspeaker_setGateState(PCSPEAKER_t* spk, uint8_t gate, uint8_t value) {
+	spk->pcspeaker_gate[gate] = value;
 }
 
-void pcspeaker_selectGate(uint8_t value) {
-	pcspeaker_gateSelect = value;
+void pcspeaker_selectGate(PCSPEAKER_t* spk, uint8_t value) {
+	spk->pcspeaker_gateSelect = value;
 }
 
-void pcspeaker_callback(void* dummy) {
-	if (pcspeaker_gateSelect == PC_SPEAKER_USE_TIMER2) {
-		if (pcspeaker_gate[PC_SPEAKER_GATE_TIMER2] && pcspeaker_gate[PC_SPEAKER_GATE_DIRECT]) {
-			if (pcspeaker_amplitude < 5000) {
-				pcspeaker_amplitude += PC_SPEAKER_MOVEMENT;
+void pcspeaker_callback(PCSPEAKER_t* spk) {
+	if (spk->pcspeaker_gateSelect == PC_SPEAKER_USE_TIMER2) {
+		if (spk->pcspeaker_gate[PC_SPEAKER_GATE_TIMER2] && spk->pcspeaker_gate[PC_SPEAKER_GATE_DIRECT]) {
+			if (spk->pcspeaker_amplitude < 5000) {
+				spk->pcspeaker_amplitude += PC_SPEAKER_MOVEMENT;
 			}
 		}
 		else {
-			if (pcspeaker_amplitude > 0) {
-				pcspeaker_amplitude -= PC_SPEAKER_MOVEMENT;
+			if (spk->pcspeaker_amplitude > 0) {
+				spk->pcspeaker_amplitude -= PC_SPEAKER_MOVEMENT;
 			}
 		}
 		//pcspeaker_amplitude = 0;
 	}
 	else {
-		if (pcspeaker_gate[PC_SPEAKER_GATE_DIRECT]) {
-			if (pcspeaker_amplitude < 5000) {
-				pcspeaker_amplitude += PC_SPEAKER_MOVEMENT;
+		if (spk->pcspeaker_gate[PC_SPEAKER_GATE_DIRECT]) {
+			if (spk->pcspeaker_amplitude < 5000) {
+				spk->pcspeaker_amplitude += PC_SPEAKER_MOVEMENT;
 			}
 		}
 		else {
-			if (pcspeaker_amplitude > 0) {
-				pcspeaker_amplitude -= PC_SPEAKER_MOVEMENT;
+			if (spk->pcspeaker_amplitude > 0) {
+				spk->pcspeaker_amplitude -= PC_SPEAKER_MOVEMENT;
 			}
 		}
 	}
-	if (pcspeaker_amplitude > 5000) pcspeaker_amplitude = 5000;
-	if (pcspeaker_amplitude < 0) pcspeaker_amplitude = 0;
+	if (spk->pcspeaker_amplitude > 5000) spk->pcspeaker_amplitude = 5000;
+	if (spk->pcspeaker_amplitude < 0) spk->pcspeaker_amplitude = 0;
 }
 
-void pcspeaker_init() {
-	timing_addTimer(pcspeaker_callback, NULL, SAMPLE_RATE, TIMING_ENABLED);
+void pcspeaker_init(PCSPEAKER_t* spk) {
+	memset(spk, 0, sizeof(PCSPEAKER_t));
+	spk->pcspeaker_gateSelect = PC_SPEAKER_GATE_DIRECT;
+	timing_addTimer(pcspeaker_callback, spk, SAMPLE_RATE, TIMING_ENABLED);
 }
 
-int16_t pcspeaker_getSample() {
+int16_t pcspeaker_getSample(PCSPEAKER_t* spk) {
 	//return 0; //PC speaker is really broken, so silence for now
-	return pcspeaker_amplitude;
+	return spk->pcspeaker_amplitude;
 }

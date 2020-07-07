@@ -39,20 +39,8 @@
 
 extern char* usemachine;
 
-extern CPU_t myCPU;
-extern I8259_t i8259;
-extern I8253_t i8253;
-extern I8237_t i8237;
-extern I8255_t i8255;
-extern UART_t UART[2];
-extern OPL2_t OPL2;
-extern BLASTER_t blaster;
 extern uint8_t videocard, showMIPS;
 extern uint32_t baudrate, ramsize;
-
-#ifdef ENABLE_TCP_MODEM
-extern TCPMODEM_t tcpmodem[2];
-#endif
 
 double speedarg = 0;
 
@@ -138,7 +126,7 @@ void args_showHelp() {
 	printf("  -h                     Show this help screen.\r\n");
 }
 
-int args_parse(int argc, char* argv[]) {
+int args_parse(MACHINE_t* machine, int argc, char* argv[]) {
 	int i;
 
 	if (argc < 2) {
@@ -175,28 +163,28 @@ int args_parse(int argc, char* argv[]) {
 				printf("Parameter required for -fd0. Use -h for help.\r\n");
 				return -1;
 			}
-			biosdisk_insert(&myCPU, 0, argv[++i]);
+			biosdisk_insert(&machine->CPU, 0, argv[++i]);
 		}
 		else if (args_isMatch(argv[i], "-fd1")) {
 			if ((i + 1) == argc) {
 				printf("Parameter required for -fd1. Use -h for help.\r\n");
 				return -1;
 			}
-			biosdisk_insert(&myCPU, 1, argv[++i]);
+			biosdisk_insert(&machine->CPU, 1, argv[++i]);
 		}
 		else if (args_isMatch(argv[i], "-hd0")) {
 			if ((i + 1) == argc) {
 				printf("Parameter required for -hd0. Use -h for help.\r\n");
 				return -1;
 			}
-			biosdisk_insert(&myCPU, 2, argv[++i]);
+			biosdisk_insert(&machine->CPU, 2, argv[++i]);
 		}
 		else if (args_isMatch(argv[i], "-hd1")) {
 			if ((i + 1) == argc) {
 				printf("Parameter required for -hd1. Use -h for help.\r\n");
 				return -1;
 			}
-			biosdisk_insert(&myCPU, 3, argv[++i]);
+			biosdisk_insert(&machine->CPU, 3, argv[++i]);
 		}
 		else if (args_isMatch(argv[i], "-boot")) {
 			if ((i + 1) == argc) {
@@ -293,20 +281,20 @@ int args_parse(int argc, char* argv[]) {
 				else {
 					port = (uint16_t)atol(argv[++i]);
 				}
-				uart_init(&UART[uartnum], &i8259, base, irq, (void*)tcpmodem_tx, &tcpmodem[uartnum], NULL, NULL);
-				tcpmodem_init(&tcpmodem[uartnum], &UART[uartnum], port);
-				timing_addTimer(tcpmodem_rxpoll, &tcpmodem[uartnum], baudrate / 9, TIMING_ENABLED);
+				uart_init(&machine->UART[uartnum], &machine->i8259, base, irq, (void*)tcpmodem_tx, &machine->tcpmodem[uartnum], NULL, NULL);
+				tcpmodem_init(&machine->tcpmodem[uartnum], &machine->UART[uartnum], port);
+				timing_addTimer(tcpmodem_rxpoll, &machine->tcpmodem[uartnum], baudrate / 9, TIMING_ENABLED);
 			} else
 #endif
 				if (args_isMatch(argv[i + 1], "mouse")) {
 				i++;
-				uart_init(&UART[uartnum], &i8259, base, irq, NULL, NULL, (void*)mouse_togglereset, NULL);
-				mouse_init(&UART[uartnum]);
+				uart_init(&machine->UART[uartnum], &machine->i8259, base, irq, NULL, NULL, (void*)mouse_togglereset, NULL);
+				mouse_init(&machine->UART[uartnum]);
 				timing_addTimer(mouse_rxpoll, NULL, baudrate / 9, TIMING_ENABLED);
 			}
 			else if (args_isMatch(argv[i + 1], "none")) {
 				i++;
-				uart_init(&UART[uartnum], &i8259, base, irq, NULL, NULL, NULL, NULL);
+				uart_init(&machine->UART[uartnum], &machine->i8259, base, irq, NULL, NULL, NULL, NULL);
 			}
 			else {
 				printf("%s is not a valid parameter for -uart%u. Use -h for help.\r\n", argv[i + 1], uartnum);

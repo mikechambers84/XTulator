@@ -24,6 +24,7 @@
 #include "config.h"
 #include "debuglog.h"
 #include "cpu/cpu.h"
+#include "machine.h"
 #include "chipset/i8259.h"
 #include "chipset/i8253.h"
 #include "chipset/i8237.h"
@@ -39,11 +40,7 @@ void (*ports_cbWriteB[PORTS_COUNT])(void* udata, uint32_t portnum, uint8_t value
 void (*ports_cbWriteW[PORTS_COUNT])(void* udata, uint32_t portnum, uint16_t value);
 void* ports_udata[PORTS_COUNT];
 
-extern CPU_t myCPU;
-extern I8259_t i8259;
-extern I8253_t i8253;
-extern I8237_t i8237;
-extern I8255_t i8255;
+extern MACHINE_t machine;
 
 void port_write(CPU_t* cpu, uint16_t portnum, uint8_t value) {
 #ifdef DEBUG_PORTS

@@ -22,6 +22,17 @@
 */
 
 #include "../../config.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <stddef.h>
+#include "sdlaudio.h"
+#include "pcspeaker.h"
+#include "opl2.h"
+#include "blaster.h"
+#include "../../machine.h"
+#include "../../timing.h"
+#include "../../utility.h"
+#include "../../debuglog.h"
 #ifdef _WIN32
 #include <Windows.h>
 #include <SDL/SDL.h>
@@ -32,16 +43,6 @@
 #include <pthread.h>
 pthread_t sdlaudio_sampleThreadID;
 #endif
-#include <stdio.h>
-#include <stdint.h>
-#include <stddef.h>
-#include "sdlaudio.h"
-#include "pcspeaker.h"
-#include "opl2.h"
-#include "blaster.h"
-#include "../../timing.h"
-#include "../../utility.h"
-#include "../../debuglog.h"
 
 int16_t sdlaudio_buf[2][SAMPLE_BUFFER], sdlaudio_curbuf = 1, sdlaudio_curpos[2] = { 0, 0 };
 
@@ -54,8 +55,7 @@ uint64_t sdlaudio_cbTime[10] = { //history of time between callbacks to dynamica
 double sdlaudio_genSampRate = SAMPLE_RATE;
 double sdlaudio_genInterval;
 
-extern OPL2_t OPL2;
-extern BLASTER_t blaster;
+MACHINE_t* sdlaudio_useMachine = NULL;
 
 void sdlaudio_fill(void* udata, uint8_t* stream, int len) {
 	//double resamp = ((double)sdlaudio_curpos[sdlaudio_curbuf ^ 1] * 2) / (double)len;
@@ -92,8 +92,10 @@ void sdlaudio_fill(void* udata, uint8_t* stream, int len) {
 	//debug_log(DEBUG_DETAIL, "Resample: %d, %fx\r\n", len, resamp);
 }
 
-int sdlaudio_init() {
+int sdlaudio_init(MACHINE_t* machine) {
 	SDL_AudioSpec wanted;
+
+	if (machine == NULL) return -1;
 
 	if (SDL_Init(SDL_INIT_AUDIO)) return -1;
 
@@ -108,6 +110,8 @@ int sdlaudio_init() {
 		return -1;
 	}
 
+	sdlaudio_useMachine = machine;
+
 	sdlaudio_timer = timing_addTimer(sdlaudio_generateSample, NULL, SAMPLE_RATE, TIMING_ENABLED);
 
 	SDL_PauseAudio(1);
@@ -121,9 +125,9 @@ void sdlaudio_generateSample(void* dummy) {
 	if (sdlaudio_curpos[sdlaudio_curbuf] == SAMPLE_BUFFER) {
 		SDL_PauseAudio(0);
 	} else {
-		val = pcspeaker_getSample() / 3;
-		val += opl2_generateSample(&OPL2) / 3;
-		val += blaster_getSample(&blaster) / 3;
+		val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker) / 3;
+		val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
+		val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;
 		sdlaudio_buf[sdlaudio_curbuf][sdlaudio_curpos[sdlaudio_curbuf]++] = val;
 	}
 }

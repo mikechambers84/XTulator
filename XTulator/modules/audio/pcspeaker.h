@@ -11,9 +11,15 @@
 
 #define PC_SPEAKER_MOVEMENT		800
 
-void pcspeaker_setGateState(uint8_t gate, uint8_t value);
-void pcspeaker_selectGate(uint8_t value);
-int16_t pcspeaker_getSample();
-void pcspeaker_init();
+typedef struct {
+	uint8_t pcspeaker_gateSelect;
+	uint8_t pcspeaker_gate[2];
+	int16_t pcspeaker_amplitude;
+} PCSPEAKER_t;
+
+void pcspeaker_setGateState(PCSPEAKER_t* spk, uint8_t gate, uint8_t value);
+void pcspeaker_selectGate(PCSPEAKER_t* spk, uint8_t value);
+int16_t pcspeaker_getSample(PCSPEAKER_t* spk);
+void pcspeaker_init(PCSPEAKER_t* spk);
 
 #endif
