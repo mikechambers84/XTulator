@@ -10,7 +10,7 @@
 //#define DEBUG_VGA
 //#define DEBUG_CGA
 //#define DEBUG_PIT
-//#define DEBUG_PIC
+#define DEBUG_PIC
 //#define DEBUG_PPI
 //#define DEBUG_UART
 //#define DEBUG_TCPMODEM
@@ -22,7 +22,7 @@
 //#define DEBUG_BLASTER
 //#define DEBUG_FDC
 
-//#define USE_FDC
+#define USE_DISK_HLE
 
 #ifdef _WIN32
 #define ENABLE_TCP_MODEM

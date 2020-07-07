@@ -26,7 +26,7 @@ It supports multiple machine defitions which are selectable via the command line
 
 I hope to get the stock IBM XT and other BIOSes bootable in the near future. They don't seem to like something about my chipset implementation, which is my highest priority bug at the moment.
 
-[You can download the current ROM set for the defined machines by clicking here.](https://gofile.io/d/te7jzh) (Links to gofile.io)
+[You can download the current ROM set for the defined machines by clicking here.](https://gofile.io/d/HDBU6i) (Links to gofile.io)
 
 Checkmarks below mean it's implemented enough to boot and run things with the "Turbo XT" BIOS. See comments for details.
 
