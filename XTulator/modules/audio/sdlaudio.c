@@ -126,7 +126,8 @@ void sdlaudio_generateSample(void* dummy) {
 		SDL_PauseAudio(0);
 	} else {
 		val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker) / 3;
-		val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
+		//val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
+		val += OPL3_getSample(&sdlaudio_useMachine->OPL3) / 3;
 		val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;
 		sdlaudio_buf[sdlaudio_curbuf][sdlaudio_curpos[sdlaudio_curbuf]++] = val;
 	}

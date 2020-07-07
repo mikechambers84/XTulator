@@ -156,6 +156,7 @@
     <ClCompile Include="main.c" />
     <ClCompile Include="memory.c" />
     <ClCompile Include="modules\audio\blaster.c" />
+    <ClCompile Include="modules\audio\nukedopl.c" />
     <ClCompile Include="modules\audio\opl2.c" />
     <ClCompile Include="modules\audio\pcspeaker.c" />
     <ClCompile Include="modules\audio\sdlaudio.c" />
@@ -185,6 +186,7 @@
     <ClInclude Include="machine.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="modules\audio\blaster.h" />
+    <ClInclude Include="modules\audio\nukedopl.h" />
     <ClInclude Include="modules\audio\opl2.h" />
     <ClInclude Include="modules\audio\pcspeaker.h" />
     <ClInclude Include="modules\audio\sdlaudio.h" />

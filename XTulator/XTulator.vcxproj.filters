@@ -141,6 +141,9 @@
     <ClCompile Include="modules\disk\fdc.c">
       <Filter>Source Files\modules\disk</Filter>
     </ClCompile>
+    <ClCompile Include="modules\audio\nukedopl.c">
+      <Filter>Source Files\modules\audio</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu\cpu.h">
@@ -229,6 +232,9 @@
     </ClInclude>
     <ClInclude Include="config.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\audio\nukedopl.h">
+      <Filter>Header Files\modules\audio</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

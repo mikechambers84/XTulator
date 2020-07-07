@@ -142,7 +142,8 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 	i8237_init(&machine->i8237, &machine->CPU);
 	i8255_init(&machine->i8255, &machine->KeyState, &machine->pcspeaker);
 	pcspeaker_init(&machine->pcspeaker);
-	opl2_init(&machine->OPL2);
+	//opl2_init(&machine->OPL2);
+	OPL3_init(&machine->OPL3);
 	blaster_init(&machine->blaster, &machine->i8237, &machine->i8259, 0x220, 1, 5);
 	cpu_reset(&machine->CPU);
 #ifndef USE_DISK_HLE

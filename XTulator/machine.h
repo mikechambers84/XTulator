@@ -11,6 +11,7 @@
 #include "chipset/uart.h"
 #include "modules/io/tcpmodem.h"
 #include "modules/audio/opl2.h"
+#include "modules/audio/nukedopl.h"
 #include "modules/audio/blaster.h"
 #include "modules/audio/pcspeaker.h"
 #include "modules/disk/fdc.h"
@@ -35,6 +36,7 @@ typedef struct {
 	TCPMODEM_t tcpmodem[2];
 #endif
 	OPL2_t OPL2;
+	opl3_chip OPL3;
 	BLASTER_t blaster;
 	PCSPEAKER_t pcspeaker;
 	KEYSTATE_t KeyState;
