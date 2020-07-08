@@ -23,6 +23,7 @@
 //#define DEBUG_FDC
 
 #define USE_DISK_HLE
+#define USE_NUKED_OPL
 
 #ifdef _WIN32
 #define ENABLE_TCP_MODEM
@@ -35,6 +36,7 @@
 
 #define SAMPLE_RATE		48000
 #define SAMPLE_BUFFER	4800
+//4800
 //There are two alternating sample buffers, each of this size
 
 #ifdef _WIN32

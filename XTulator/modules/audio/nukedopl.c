@@ -1,40 +1,43 @@
-//
-// Copyright (C) 2013-2018 Alexey Khokholov (Nuke.YKT)
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-//
-//  Nuked OPL3 emulator.
-//  Thanks:
-//      MAME Development Team(Jarek Burczynski, Tatsuyuki Satoh):
-//          Feedback and Rhythm part calculation information.
-//      forums.submarine.org.uk(carbon14, opl3):
-//          Tremolo and phase generator calculation information.
-//      OPLx decapsulated(Matthew Gambrell, Olli Niemitalo):
-//          OPL2 ROMs.
-//      siliconpr0n.org(John McMaster, digshadow):
-//          YMF262 and VRC VII decaps and die shots.
-//
-// version: 1.8
-//
+/* Nuked OPL3
+ * Copyright (C) 2013-2020 Nuke.YKT
+ *
+ * This file is part of Nuked OPL3.
+ *
+ * Nuked OPL3 is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 2.1
+ * of the License, or (at your option) any later version.
+ *
+ * Nuked OPL3 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Nuked OPL3. If not, see <https://www.gnu.org/licenses/>.
+
+ *  Nuked OPL3 emulator.
+ *  Thanks:
+ *      MAME Development Team(Jarek Burczynski, Tatsuyuki Satoh):
+ *          Feedback and Rhythm part calculation information.
+ *      forums.submarine.org.uk(carbon14, opl3):
+ *          Tremolo and phase generator calculation information.
+ *      OPLx decapsulated(Matthew Gambrell, Olli Niemitalo):
+ *          OPL2 ROMs.
+ *      siliconpr0n.org(John McMaster, digshadow):
+ *          YMF262 and VRC VII decaps and die shots.
+ *
+ * version: 1.8
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "nukedopl.h"
-#include "../../ports.h"
 
 #define RSM_FRAC    10
 
-// Channel types
+ // Channel types
 
 enum {
     ch_2op = 0,
@@ -1383,13 +1386,31 @@ int16_t OPL3_getSample(opl3_chip* chip) {
     return ret;
 }
 
+uint8_t OPL3_read(opl3_chip* chip, uint32_t portnum) {
+    portnum &= 1;
+    if (portnum == 0) { //status port
+        uint8_t ret;
+        ret = (chip->data4 & 0x01) ? 0x40 : 0x00;
+        ret |= (chip->data4 & 0x02) ? 0x20 : 0x00;
+        ret |= ret ? 0x80 : 0x00;
+        return ret;
+    }
+    else {
+        return 0xFF;
+    }
+
+}
+
 void OPL3_write(opl3_chip* chip, uint32_t portnum, uint8_t value) {
-    static Bit16u port;
+    static Bit16u port = 0;
     switch (portnum) {
     case 0x388:
         port = value;
         break;
     case 0x389:
+        if (port == 0x04) {
+            chip->data4 = value;
+        }
         OPL3_WriteReg(chip, (Bit16u)port, value);
         break;
     }
@@ -1397,5 +1418,5 @@ void OPL3_write(opl3_chip* chip, uint32_t portnum, uint8_t value) {
 
 void OPL3_init(opl3_chip* chip) {
     OPL3_Reset(chip, SAMPLE_RATE);
-    ports_cbRegister(0x388, 2, NULL, NULL, (void*)OPL3_write, NULL, chip);
+    ports_cbRegister(0x388, 2, (void*)OPL3_read, NULL, (void*)OPL3_write, NULL, chip);
 }

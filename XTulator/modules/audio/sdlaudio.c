@@ -44,7 +44,12 @@
 pthread_t sdlaudio_sampleThreadID;
 #endif
 
-int16_t sdlaudio_buf[2][SAMPLE_BUFFER], sdlaudio_curbuf = 1, sdlaudio_curpos[2] = { 0, 0 };
+SDL_mutex* sdlaudio_mutex = NULL;
+SDL_cond* sdlaudio_canFill = NULL;
+SDL_cond* sdlaudio_canBuffer = NULL;
+
+int16_t sdlaudio_buffer[SAMPLE_BUFFER], sdlaudio_bufferpos = 0;
+double sdlaudio_rateFast;
 
 uint8_t sdlaudio_firstfill = 1, sdlaudio_timeIdx = 0;
 SDL_AudioSpec sdlaudio_gotspec;
@@ -57,39 +62,19 @@ double sdlaudio_genInterval;
 
 MACHINE_t* sdlaudio_useMachine = NULL;
 
+void sdlaudio_moveBuffer(int16_t* dst, int len);
+
 void sdlaudio_fill(void* udata, uint8_t* stream, int len) {
-	//double resamp = ((double)sdlaudio_curpos[sdlaudio_curbuf ^ 1] * 2) / (double)len;
-	//int i;
 	static uint8_t timesmissed = 0;
 	static uint64_t curtime, lasttime;
 
-	if (sdlaudio_timeIdx < 10) {
-		curtime = timing_getCur();
-		if (!sdlaudio_firstfill) {
-			sdlaudio_cbTime[sdlaudio_timeIdx++] = curtime - lasttime;
-			if (sdlaudio_timeIdx == 10) {
-				uint8_t i;
-				uint64_t avg = 0;
-				for (i = 0; i < 10; i++) {
-					avg += sdlaudio_cbTime[i];
-				}
-				avg /= SAMPLE_BUFFER;
-				avg /= 10;
-				sdlaudio_genInterval = (double)avg;
-				timing_updateInterval(sdlaudio_timer, (uint64_t)sdlaudio_genInterval);
-			}
-		}
-		lasttime = timing_getCur();
-		sdlaudio_firstfill = 0;
-	}
+	//SDL_LockMutex(sdlaudio_mutex);
+	//SDL_CondWait(sdlaudio_canFill, sdlaudio_mutex);
 
-	memset(stream, 0, len);
-	memcpy(stream, sdlaudio_buf[sdlaudio_curbuf ^ 1], len);
-	//debug_log(DEBUG_INFO, "%d       \r\n", sdlaudio_curpos[sdlaudio_curbuf ^ 1]);
+	sdlaudio_moveBuffer((int16_t*)stream, len);
 
-	sdlaudio_curpos[sdlaudio_curbuf ^ 1] = 0;
-	sdlaudio_curbuf ^= 1;
-	//debug_log(DEBUG_DETAIL, "Resample: %d, %fx\r\n", len, resamp);
+	//SDL_UnlockMutex(sdlaudio_mutex);
+	//SDL_CondSignal(sdlaudio_canBuffer);
 }
 
 int sdlaudio_init(MACHINE_t* machine) {
@@ -99,10 +84,14 @@ int sdlaudio_init(MACHINE_t* machine) {
 
 	if (SDL_Init(SDL_INIT_AUDIO)) return -1;
 
+	sdlaudio_mutex = SDL_CreateMutex();
+	sdlaudio_canFill = SDL_CreateCond();
+	sdlaudio_canBuffer = SDL_CreateCond();
+
 	wanted.freq = SAMPLE_RATE;
 	wanted.format = AUDIO_S16;
 	wanted.channels = 1;
-	wanted.samples = SAMPLE_BUFFER;
+	wanted.samples = SAMPLE_BUFFER >> 2;
 	wanted.callback = sdlaudio_fill;
 	wanted.userdata = NULL;
 
@@ -112,23 +101,72 @@ int sdlaudio_init(MACHINE_t* machine) {
 
 	sdlaudio_useMachine = machine;
 
-	sdlaudio_timer = timing_addTimer(sdlaudio_generateSample, NULL, SAMPLE_RATE, TIMING_ENABLED);
+	sdlaudio_rateFast = (double)(SAMPLE_RATE) * 1.01;
 
+	sdlaudio_timer = timing_addTimer(sdlaudio_generateSample, NULL, SAMPLE_RATE, TIMING_ENABLED);
+	
 	SDL_PauseAudio(1);
+	SDL_CondSignal(sdlaudio_canFill);
+	SDL_CondSignal(sdlaudio_canBuffer);
 
 	return 0;
+}
+
+void sdlaudio_bufferSample(int16_t val) {
+	if (sdlaudio_bufferpos == SAMPLE_BUFFER) { //this shouldn't happen
+		return;
+	}
+
+	//SDL_LockMutex(sdlaudio_mutex);
+	//SDL_CondWait(sdlaudio_canBuffer, sdlaudio_mutex);
+
+	sdlaudio_buffer[sdlaudio_bufferpos++] = val;
+
+	if (sdlaudio_bufferpos < (int)((double)(SAMPLE_BUFFER) * 0.5)) {
+		timing_updateIntervalFreq(sdlaudio_timer, sdlaudio_rateFast);
+	}
+	else if (sdlaudio_bufferpos >= (int)((double)(SAMPLE_BUFFER) * 0.75)) {
+		timing_updateIntervalFreq(sdlaudio_timer, SAMPLE_RATE);
+		SDL_PauseAudio(0);
+	}
+
+	if (sdlaudio_bufferpos == SAMPLE_BUFFER) {
+		timing_timerDisable(sdlaudio_timer);
+	}
+
+	//SDL_UnlockMutex(sdlaudio_mutex);
+	//SDL_CondSignal(sdlaudio_canFill);
+}
+
+void sdlaudio_moveBuffer(int16_t* dst, int len) {
+	int i;
+	memset(dst, 0, len);
+
+	if (sdlaudio_bufferpos < (int)((double)(SAMPLE_BUFFER) * 0.75)) {
+		timing_timerEnable(sdlaudio_timer);
+	}
+
+	if ((sdlaudio_bufferpos << 1) < len) {
+		SDL_PauseAudio(1);
+		return;
+	}
+
+	for (i = 0; i < (len >> 1); i++) {
+		dst[i] = sdlaudio_buffer[i];
+	}
+	for (; i < sdlaudio_bufferpos; i++) {
+		sdlaudio_buffer[i - (len >> 1)] = sdlaudio_buffer[i];
+	}
+	sdlaudio_bufferpos -= len >> 1;
 }
 
 void sdlaudio_generateSample(void* dummy) {
 	int16_t val;
 
-	if (sdlaudio_curpos[sdlaudio_curbuf] == SAMPLE_BUFFER) {
-		SDL_PauseAudio(0);
-	} else {
-		val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker) / 3;
-		//val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
-		val += OPL3_getSample(&sdlaudio_useMachine->OPL3) / 3;
-		val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;
-		sdlaudio_buf[sdlaudio_curbuf][sdlaudio_curpos[sdlaudio_curbuf]++] = val;
-	}
+	val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker);
+	//val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
+	val += OPL3_getSample(&sdlaudio_useMachine->OPL3);
+	val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;
+
+	sdlaudio_bufferSample(val);
 }

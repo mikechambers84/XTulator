@@ -1,46 +1,54 @@
-//
-// Copyright (C) 2013-2020 Alexey Khokholov (Nuke.YKT)
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-//
-//  Nuked OPL3 emulator.
-//  Thanks:
-//      MAME Development Team(Jarek Burczynski, Tatsuyuki Satoh):
-//          Feedback and Rhythm part calculation information.
-//      forums.submarine.org.uk(carbon14, opl3):
-//          Tremolo and phase generator calculation information.
-//      OPLx decapsulated(Matthew Gambrell, Olli Niemitalo):
-//          OPL2 ROMs.
-//      siliconpr0n.org(John McMaster, digshadow):
-//          YMF262 and VRC VII decaps and die shots.
-//
-// version: 1.8
-//
+/* Nuked OPL3
+ * Copyright (C) 2013-2020 Nuke.YKT
+ *
+ * This file is part of Nuked OPL3.
+ *
+ * Nuked OPL3 is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 2.1
+ * of the License, or (at your option) any later version.
+ *
+ * Nuked OPL3 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Nuked OPL3. If not, see <https://www.gnu.org/licenses/>.
+
+ *  Nuked OPL3 emulator.
+ *  Thanks:
+ *      MAME Development Team(Jarek Burczynski, Tatsuyuki Satoh):
+ *          Feedback and Rhythm part calculation information.
+ *      forums.submarine.org.uk(carbon14, opl3):
+ *          Tremolo and phase generator calculation information.
+ *      OPLx decapsulated(Matthew Gambrell, Olli Niemitalo):
+ *          OPL2 ROMs.
+ *      siliconpr0n.org(John McMaster, digshadow):
+ *          YMF262 and VRC VII decaps and die shots.
+ *
+ * version: 1.8
+ */
 
 #ifndef OPL_OPL3_H
 #define OPL_OPL3_H
-#define OPL_WRITEBUF_SIZE   1024
-#define OPL_WRITEBUF_DELAY  1
 
+#include <inttypes.h>
 #include "../../config.h"
 
-typedef uint8_t             Bit8u;
-typedef int8_t              Bit8s;
-typedef uint16_t            Bit16u;
-typedef int16_t             Bit16s;
-typedef uint32_t            Bit32u;
-typedef int32_t             Bit32s;
-typedef uint64_t            Bit64u;
-typedef int64_t             Bit64s;
+#define OPL_WRITEBUF_SIZE   1024
+#define OPL_WRITEBUF_DELAY  2
+
+typedef uintptr_t       Bitu;
+typedef intptr_t        Bits;
+typedef uint64_t        Bit64u;
+typedef int64_t         Bit64s;
+typedef uint32_t        Bit32u;
+typedef int32_t         Bit32s;
+typedef uint16_t        Bit16u;
+typedef int16_t         Bit16s;
+typedef uint8_t         Bit8u;
+typedef int8_t          Bit8s;
 
 typedef struct _opl3_slot opl3_slot;
 typedef struct _opl3_channel opl3_channel;
@@ -136,6 +144,8 @@ struct _opl3_chip {
     Bit32u writebuf_last;
     Bit64u writebuf_lasttime;
     opl3_writebuf writebuf[OPL_WRITEBUF_SIZE];
+
+    Bit8u data4;
 };
 
 void OPL3_Generate(opl3_chip* chip, Bit16s* buf);

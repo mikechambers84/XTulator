@@ -2,7 +2,7 @@
 
 ### About
 
-XTulator is an x86 PC emulator that is designed to run software that was written for Intel processors up to the 80186. It's able to run MS-DOS, FreeDOS, Windows 3.0, and many games of the era. It supports graphics up to the EGA/VGA standard, and emulates the Sound Blaster 2.0. It also emulates peripherals like the standard Microsoft-compatible serial mouse and a serial modem, which can simulate phone line connections via TCP.
+XTulator is an x86 PC emulator that is designed to run software that was written for Intel processors up to the 80186. It's able to run MS-DOS, FreeDOS, Windows 3.0, and many games of the era. It supports graphics up to the EGA/VGA standard, and emulates the Sound Blaster 2.0 as well as Adlib/OPL2 (using Nuked OPL). It also emulates peripherals like the standard Microsoft-compatible serial mouse and a serial modem, which can simulate phone line connections via TCP.
 
 This is actually a rewrite of an emulator I wrote many years ago, but has been on hiatus since 2013. It was poorly implemented, even though it worked fairly well. It had many hacks and a poor architecture, but most old 80186 software could still run under it.
 
@@ -34,19 +34,19 @@ Checkmarks below mean it's implemented enough to boot and run things with the "T
 - [x] Implement support for multiple machine defnitions (This exists, but only the generic_xt machine boots, the other BIOSes have issues. This is a high priority thing to fix)
 - [x] Intel 8253 timer (Re-implemented, but needs some work to be fully accurate)
 - [x] Intel 8259 interrupt controller (Working, also needs some more attention. This may be the cause of some of the BIOS issues.)
-- [ ] Intel 8237 DMA controller (Partially implemented, same as above regarding BIOS boot issues)
-- [ ] Intel 8255 PPI controller (Partially implemented)
+- [x] Intel 8237 DMA controller (Partially implemented, same as above regarding BIOS boot issues)
+- [x] Intel 8255 PPI controller
 - [x] Re-implement proper system timing
 - [x] Re-implement proper video rendering
 - [x] Rewrite and improve EGA/VGA handling from old emulator (EGA/VGA works now, with some bugs)
 - [ ] Implement proper IDE and floppy controller interfaces (Work begun on FDC)
 - [x] Keyboard input
-- [ ] Mouse input  (Partially working. Works in DOS things, Windows 3.0 doesn't recognize it)
+- [x] Mouse input
 - [x] PC speaker (Works, but need to figure out why RealSound doesn't work in Links)
-- [ ] Adlib/OPL2 (It's making noises, but not good noises)
+- [x] Adlib/OPL2 (Using Nuked OPL for now. Still working on my own OPL code, which is making noises, but not good noises.)
 - [x] Sound Blaster (SB 2.0 compatibility, but still need to add high speed DMA mode. Glitches with a couple of games I've tried, working on it...)
 - [x] RTC (Need to fix this under non-Win32 OSes)
-- [ ] Emulate a Hayes-compatible a serial modem using TCP (somewhat working, only in Windows)
+- [x] Emulate a Hayes-compatible a serial modem using TCP (somewhat working, only in Windows)
 - [ ] Novell NE1000/NE2000 ethernet
 - [ ] Implement Intel 8080 emulation in the NEC V20 mode (low priority)
 
