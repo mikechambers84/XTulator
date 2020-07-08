@@ -4,9 +4,7 @@
 
 XTulator is an x86 PC emulator that is designed to run software that was written for Intel processors up to the 80186. It's able to run MS-DOS, FreeDOS, Windows 3.0, and many games of the era. It supports graphics up to the EGA/VGA standard, and emulates the Sound Blaster 2.0 as well as Adlib/OPL2 (using Nuked OPL). It also emulates peripherals like the standard Microsoft-compatible serial mouse and a serial modem, which can simulate phone line connections via TCP.
 
-This is actually a rewrite of an emulator I wrote many years ago, but has been on hiatus since 2013. It was poorly implemented, even though it worked fairly well. It had many hacks and a poor architecture, but most old 80186 software could still run under it.
-
-But I've never been happy with it, so I am rewriting and/or refactoring all of the code to be more sane, accurate and (hopefully) readable. I'm aiming to create a much more modular architecture this time around and remove shared global variables wherever possible since the overuse of these in the original version turned the code into a mess.
+This is actually a rewrite of an emulator I wrote many years ago. It was poorly implemented, even though it worked fairly well. It had many hacks and a poor architecture, but most old 80186 software could still run under it. I've just never quite been happy with it, so I am writing this new emulator to be more sanely coded, and more accurate. I'm aiming to create a much more modular architecture this time around and avoid the design flaws which turned the old code into a mess.
 
 ### Re-write goals
 
@@ -15,20 +13,22 @@ But I've never been happy with it, so I am rewriting and/or refactoring all of t
 - Implement a sort of generic "virtual ISA card" interface
 - Keep CPU and other modules as independent of each other as possible
 - Improve accuracy of chipset and components emulation
-- Maintain platform-independence as much as possible
+- Maintain host platform-independence
 - Implement proper hard drive and floppy disk controller interfaces, rather than "cheating" with HLE like before
 
 ### Current status
 
-WARNING: This software is still currently in the early stages, and not really ready for general use but it's usable.
+WARNING: This software is still currently in the early stages, and not really ready for general use. If you enjoy testing experimental new software, this is for you!
 
-It supports multiple machine defitions which are selectable via the command line. (-machine option, use -h for help) Only the "generic_xt" machine is currently bootable. This is currently making use of the [Super PC/Turbo XT BIOS](http://www.phatcode.net/downloads.php?id=101) from [phatcode.net](http://www.phatcode.net) which is attributed to Ya'akov Miles and Jon Petrosky.
+It supports multiple machine definitions which are selectable via the command line. (-machine option, use -h for help) Only the "generic_xt" machine is currently bootable. This is currently making use of the [Super PC/Turbo XT BIOS](http://www.phatcode.net/downloads.php?id=101) from [phatcode.net](http://www.phatcode.net) which is attributed to Ya'akov Miles and Jon Petrosky.
 
 I hope to get the stock IBM XT and other BIOSes bootable in the near future. They don't seem to like something about my chipset implementation, which is my highest priority bug at the moment.
 
+You cannot change floppy images on the fly yet. I'm trying to come up with a cross-platform GUI method to do this and change other options in real-time. If you need to install an OS and programs on a hard disk image, it may be best for now to do that in something like QEMU or Fake86, and then boot the HDD image in XTulator.
+
 [You can download the current ROM set for the defined machines by clicking here.](https://gofile.io/d/HDBU6i) (Links to gofile.io)
 
-Checkmarks below mean it's implemented enough to boot and run things with the "Turbo XT" BIOS. See comments for details.
+Checkmarks below mean that feature is implemented enough to boot and run things with the "generic_xt" machine definition. See comments below for details.
 
 - [x] CPU - Complete
 - [x] Implement support for multiple machine defnitions (This exists, but only the generic_xt machine boots, the other BIOSes have issues. This is a high priority thing to fix)
@@ -47,7 +47,7 @@ Checkmarks below mean it's implemented enough to boot and run things with the "T
 - [x] Sound Blaster (SB 2.0 compatibility, but still need to add high speed DMA mode. Glitches with a couple of games I've tried, working on it...)
 - [x] RTC (Need to fix this under non-Win32 OSes)
 - [x] Emulate a Hayes-compatible a serial modem using TCP (somewhat working, only in Windows)
-- [ ] Novell NE1000/NE2000 ethernet
+- [ ] Novell NE1000/NE2000 ethernet (May just port this in from Bochs)
 - [ ] Implement Intel 8080 emulation in the NEC V20 mode (low priority)
 
 
