@@ -12,13 +12,16 @@ typedef struct {
 } VGADAC_t;
 
 extern uint8_t vga_palette[256][3];
+extern volatile double vga_lockFPS;
 
 int vga_init();
+void vga_updateScanlineTiming();
 void vga_update(uint32_t start_x, uint32_t start_y, uint32_t end_x, uint32_t end_y);
 void vga_writeport(void* dummy, uint16_t port, uint8_t value);
 uint8_t vga_readport(void* dummy, uint16_t port);
 void vga_blinkCallback(void* dummy);
-void vga_scanlineCallback(void* dummy);
+void vga_hblankCallback(void* dummy);
+void vga_hblankEndCallback(void* dummy);
 void vga_drawCallback(void* dummy);
 void vga_renderThread(void* cpu);
 void vga_writememory(void* dummy, uint32_t addr, uint8_t value);

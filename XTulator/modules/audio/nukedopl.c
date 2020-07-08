@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../ports.h"
 #include "nukedopl.h"
 
 #define RSM_FRAC    10

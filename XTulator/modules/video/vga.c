@@ -68,7 +68,13 @@ uint8_t vga_cursor_blink_state = 0;
 volatile uint8_t vga_wmode, vga_rmode, vga_shiftmode, vga_rotate, vga_logicop, vga_enableplane, vga_readmap, vga_scandbl, vga_hdbl, vga_bpp, vga_latch[4];
 uint8_t* vga_RAM[4]; //4 planes
 
-volatile uint8_t vga_doDraw = 0;
+volatile uint64_t vga_hblankstart, vga_hblankend, vga_hblanklen, vga_dispinterval, vga_hblankinterval;
+volatile uint64_t vga_vblankstart, vga_vblankend, vga_vblanklen, vga_vblankinterval, vga_frameinterval;
+volatile uint8_t vga_doRender = 0, vga_doBlit = 0;
+volatile double vga_targetFPS = 60, vga_lockFPS = 0;
+
+volatile uint32_t vga_hblankTimer, vga_hblankEndTimer, vga_drawTimer;
+volatile uint16_t vga_curScanline = 0;
 
 int vga_init() {
 	int x, y, i;
@@ -80,17 +86,15 @@ int vga_init() {
 	}
 	sdlconsole_blit((uint32_t*)vga_framebuffer, 640, 400, 1024 * sizeof(uint32_t));
 
+	if (vga_lockFPS >= 1) {
+		vga_targetFPS = vga_lockFPS;
+	}
+
 	timing_addTimer(vga_blinkCallback, NULL, 3.75, TIMING_ENABLED);
-	timing_addTimer(vga_scanlineCallback, NULL, 62800, TIMING_ENABLED); //TODO: make this accurate
-	timing_addTimer(vga_drawCallback, NULL, 60, TIMING_ENABLED);
-	/*
-		NOTE: CGA scanlines are clocked at 15.7 KHz. We are breaking each scanline into
-		four parts and using the last part as a very approximate horizontal retrace period.
-
-		15700 x 4 = 62800
-
-		See cga_scanlineCallback function for more details.
-	*/
+	vga_drawTimer = timing_addTimer(vga_drawCallback, NULL, vga_targetFPS, TIMING_ENABLED);
+	vga_hblankTimer = timing_addTimer(vga_hblankCallback, NULL, 10000, TIMING_ENABLED); //nonsense frequency values to begin with is fine
+	vga_hblankEndTimer = timing_addTimer(vga_hblankEndCallback, NULL, 100, TIMING_ENABLED); //same here
+	vga_curScanline = 0;
 
 	for (i = 0; i < 4; i++) { //4 planes of 64 KB (It's actually 64K addresses on a 32-bit data bus on real VGA hardware)
 		vga_RAM[i] = (uint8_t*)malloc(65536);
@@ -119,6 +123,50 @@ int vga_init() {
 	memory_mapRegister(0xC0000, 32768, VBIOS, NULL);
 
 	return 0;
+}
+
+void vga_updateScanlineTiming() {
+	double pixelclock;
+	static uint32_t lastw = 0, lasth = 0;
+	static double lastFPS = 0;
+
+	if (vga_misc & 0x04) { //pixel clock select
+		pixelclock = 28322000.0;
+	}
+	else {
+		pixelclock = 25175000.0;
+	}
+	vga_targetFPS = pixelclock / ((double)vga_hblankend * (double)vga_vblankend);
+	pixelclock = (double)timing_getFreq() / pixelclock;
+
+	vga_hblankstart = (uint64_t)vga_crtcd[0x02] * (uint64_t)vga_dots;
+	vga_hblankend = ((uint64_t)vga_crtcd[0x02] * (uint64_t)vga_dots) + (((uint64_t)vga_crtcd[0x03] & 0x1F) + 1) * (uint64_t)vga_dots;
+	vga_hblanklen = vga_hblankend - vga_hblankstart;
+	vga_vblankstart = (uint64_t)vga_crtcd[0x10] | ((uint64_t)(vga_crtcd[0x07] & 0x04) << 6) | ((uint64_t)(vga_crtcd[0x07] & 0x80) << 2);
+	vga_vblankend = (uint64_t)vga_crtcd[0x06] | ((uint64_t)(vga_crtcd[0x07] & 0x01) << 8) | ((uint64_t)(vga_crtcd[0x07] & 0x20) << 4);
+	vga_vblanklen = vga_vblankend - vga_vblankstart;
+	vga_dispinterval = (uint64_t)((double)vga_hblankstart * pixelclock);
+	vga_hblankinterval = (uint64_t)((double)vga_hblanklen * pixelclock);
+	vga_vblankinterval = (uint64_t)((double)vga_hblankend * (double)vga_vblanklen * pixelclock);
+	vga_frameinterval = (uint64_t)((double)vga_hblankend * (double)vga_vblankend * pixelclock);
+	/*printf("hblank start = %llu, hblank end = %llu, hblank len = %llu, disp interval = %llu, hblank interval = %llu, freq = %llu\r\n",
+		vga_hblankstart, vga_hblankend, vga_hblanklen, vga_dispinterval, vga_hblankinterval, timing_freq);
+	printf("vblank start = %llu, vblank end = %llu, vblank len = %llu, vblank interval = %llu, frameinterval = %llu\r\n",
+		vga_vblankstart, vga_vblankend, vga_vblanklen, vga_vblankinterval, vga_frameinterval);*/
+	if ((lastw != vga_w) || (lasth != vga_h) || (lastFPS != vga_targetFPS)) {
+		debug_log(DEBUG_DETAIL, "[VGA] Mode switch: %lux%lu (%.02f Hz)\r\n", vga_w, vga_h, vga_targetFPS);
+		lastw = vga_w;
+		lasth = vga_h;
+		lastFPS = vga_targetFPS;
+	}
+
+	timing_updateInterval(vga_hblankTimer, vga_dispinterval);
+	timing_updateInterval(vga_hblankEndTimer, vga_hblankinterval);
+	timing_timerEnable(vga_hblankTimer);
+	timing_timerDisable(vga_hblankEndTimer);
+	if (vga_lockFPS == 0) {
+		timing_updateIntervalFreq(vga_drawTimer, vga_targetFPS);
+	}
 }
 
 void vga_update(uint32_t start_x, uint32_t start_y, uint32_t end_x, uint32_t end_y) {
@@ -333,16 +381,20 @@ void vga_update(uint32_t start_x, uint32_t start_y, uint32_t end_x, uint32_t end
 		break;
 
 	}
-
-	sdlconsole_blit((uint32_t*)vga_framebuffer, (int)vga_w, (int)vga_h, 1024 * sizeof(uint32_t));
 }
 
 void vga_renderThread(void* dummy) {
 	while (running) {
-		if (vga_doDraw == 1) {
+		if (vga_doRender == 1) {
 			vga_update(0, 0, vga_w - 1, vga_h - 1);
-			vga_doDraw = 0;
-		} else {
+			vga_doRender = 0;
+		}
+
+		if (vga_doBlit == 1) {
+			sdlconsole_blit((uint32_t*)vga_framebuffer, (int)vga_w, (int)vga_h, 1024 * sizeof(uint32_t));
+			vga_doBlit = 0;
+		}
+		else {
 			utility_sleep(1);
 		}
 	}
@@ -382,6 +434,8 @@ void vga_calcscreensize() {
 	if (((vga_shiftmode & 0x20) == 0) && (vga_seqd[0x01] & 0x08)) {
 		vga_w <<= 1;
 	}
+
+	vga_updateScanlineTiming();
 
 	//debug_log(DEBUG_DETAIL, "video size: %lux%lu\r\n", vga_w, vga_h);
 }
@@ -715,33 +769,30 @@ uint8_t vga_readmemory(void* dummy, uint32_t addr) {
 }
 
 void vga_drawCallback(void* dummy) {
-	vga_doDraw = 1;
+	vga_doRender = 1;
+	vga_doBlit = 1;
 }
 
 void vga_blinkCallback(void* dummy) {
 	vga_cursor_blink_state ^= 1;
 }
 
-void vga_scanlineCallback(void* dummy) {
-	/*
-		TODO: Make this accurate.
-	*/
-	static uint16_t scanline = 0, hpart = 0;
-
-	vga_status1 = (hpart == 3) ? 1 : 0;
-	vga_status1 |= (scanline >= 224) ? 8 : 0;
-
-	hpart++;
-	if (hpart == 4) {
-		/*if (scanline < 200) {
-			vga_update(0, (scanline<<1), 639, (scanline<<1)+1);
-		}*/
-		hpart = 0;
-		scanline++;
+void vga_hblankCallback(void* dummy) {
+	timing_timerEnable(vga_hblankEndTimer);
+	vga_status1 |= 0x01;
+	vga_curScanline++;
+	if (vga_curScanline == vga_vblankstart) {
+		vga_status1 |= 0x08;
 	}
-	if (scanline == 256) {
-		scanline = 0;
+	else if (vga_curScanline == vga_vblankend) {
+		vga_curScanline = 0;
+		vga_status1 &= 0xF7;
 	}
+}
+
+void vga_hblankEndCallback(void* dummy) {
+	timing_timerDisable(vga_hblankEndTimer);
+	vga_status1 &= 0xFE;
 }
 
 void vga_dumpregs() {

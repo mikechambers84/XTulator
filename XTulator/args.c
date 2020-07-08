@@ -35,6 +35,8 @@
 #include "modules/audio/pcspeaker.h"
 #include "modules/audio/opl2.h"
 #include "modules/audio/blaster.h"
+#include "modules/video/cga.h"
+#include "modules/video/vga.h"
 #include "debuglog.h"
 
 extern char* usemachine;
@@ -88,7 +90,9 @@ void args_showHelp() {
 	printf("  -boot <disk>           Use <disk> (fd0, fd1, hd0 or hd1) as boot disk.\r\n\r\n");
 
 	printf("Video options:\r\n");
-	printf("  -video <type>          Use <type> (CGA or VGA) video card emulation. (Default is machine-dependent)\r\n\r\n");
+	printf("  -video <type>          Use <type> (CGA or VGA) video card emulation. (Default is machine-dependent)\r\n");
+	printf("  -fpslock <FPS>         Attempt to lock video refresh to <FPS> frames per second.\r\n");
+	printf("                         (Default is to base FPS on video adapter timings and is dynamic)\r\n\r\n");
 
 	printf("Serial options:\r\n");
 #ifdef ENABLE_TCP_MODEM
@@ -213,6 +217,17 @@ int args_parse(MACHINE_t* machine, int argc, char* argv[]) {
 				return -1;
 			}
 			i++;
+		}
+		else if (args_isMatch(argv[i], "-fpslock")) {
+			if ((i + 1) == argc) {
+				printf("Parameter required for -fpslock. Use -h for help.\r\n");
+				return -1;
+			}
+			vga_lockFPS = atof(argv[++i]);
+			if ((vga_lockFPS < 1) || (vga_lockFPS > 144)) {
+				printf("%f is an invalid FPS option, valid range is 1 to 144\r\n", vga_lockFPS);
+				return -1;
+			}
 		}
 		else if (args_isMatch(argv[i], "-mem")) {
 			if ((i + 1) == argc) {
