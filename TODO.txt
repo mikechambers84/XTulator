@@ -2,9 +2,7 @@
 
 Make configure script for Linux and MacOS.
 
-Complete UART.
-
-Complete TCP modem.
+Complete TCP modem and make the code cleaner.
 
 Implement all DMA modes and fix bugs.
 
@@ -18,9 +16,7 @@ MFM controller??
 
 Sound Blaster 2.0 high speed DMA mode, and fix glitches in certain games.
 
-Make OPL2 not suck so bad/be completely broken.
-
-Figure out why mouse doesn't work in Windows 3.0.
+Make my own OPL2 code not suck so bad/be completely broken.
 
 Novel NE2000 support.
 
