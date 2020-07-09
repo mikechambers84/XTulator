@@ -347,11 +347,17 @@ void tcpmodem_tx(TCPMODEM_t* tcpmodem, uint8_t value) {
 		if (tcpmodem->echocmd) {
 			uart_rxdata(tcpmodem->uart, value);
 		}
-		if (value == 13) {
+		if (value == 8) {
+			if (tcpmodem->txpos > 0) {
+				tcpmodem->txpos--;
+			}
+		}
+		else if (value == 13) {
 			tcpmodem->txbuf[tcpmodem->txpos + 1] = 0;
 			tcpmodem_parseAT(tcpmodem);
 			tcpmodem->txpos = 0;
-		} else if (tcpmodem->txpos < 1023) {
+		}
+		else if (tcpmodem->txpos < 1023) {
 			switch (value) {
 			case 0:
 			case 32:
@@ -380,6 +386,8 @@ void tcpmodem_ringer(TCPMODEM_t* tcpmodem) {
 }
 
 int tcpmodem_init(TCPMODEM_t* tcpmodem, UART_t* uart, uint16_t port) {
+	debug_log(DEBUG_INFO, "[TCPMODEM] Initializing TCP serial modem emulator (listen on port %u)\r\n", port);
+
 	memset(tcpmodem, 0, sizeof(TCPMODEM_t));
 	tcpmodem->uart = uart;
 	tcpmodem->escaped = 1;

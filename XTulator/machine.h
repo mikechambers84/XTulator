@@ -25,6 +25,25 @@
 #define MACHINE_ROM_REQUIRED	1
 #define MACHINE_ROM_ISNOTROM	2
 
+#define MACHINE_HW_OPL					0x0000000000000001ULL
+#define MACHINE_HW_BLASTER				0x0000000000000002ULL
+#define MACHINE_HW_UART0_NONE			0x0000000000000004ULL
+#define MACHINE_HW_UART0_MOUSE			0x0000000000000008ULL
+#define MACHINE_HW_UART0_TCPMODEM		0x0000000000000010ULL
+#define MACHINE_HW_UART1_NONE			0x0000000000000020ULL
+#define MACHINE_HW_UART1_MOUSE			0x0000000000000040ULL
+#define MACHINE_HW_UART1_TCPMODEM		0x0000000000000080ULL
+#define MACHINE_HW_RTC					0x0000000000000100ULL
+#define MACHINE_HW_DISK_HLE				0x0000000000000200ULL
+
+//the "skip" HW flags are set in args.c to make sure machine init functions don't override explicit settings from the command line
+#define MACHINE_HW_SKIP_OPL				0x8000000000000000ULL
+#define MACHINE_HW_SKIP_BLASTER			0x4000000000000000ULL
+#define MACHINE_HW_SKIP_UART0			0x2000000000000000ULL
+#define MACHINE_HW_SKIP_UART1			0x1000000000000000ULL
+#define MACHINE_HW_SKIP_DISK			0x0800000000000000ULL
+#define MACHINE_HW_SKIP_RTC				0x0400000000000000ULL
+
 typedef struct {
 	CPU_t CPU;
 	I8259_t i8259;
@@ -37,10 +56,13 @@ typedef struct {
 #endif
 	OPL2_t OPL2;
 	opl3_chip OPL3;
+	uint8_t mixOPL;
 	BLASTER_t blaster;
+	uint8_t mixBlaster;
 	PCSPEAKER_t pcspeaker;
 	KEYSTATE_t KeyState;
 	FDC_t fdc;
+	uint64_t hwflags;
 } MACHINE_t;
 
 typedef struct {
@@ -57,6 +79,7 @@ typedef struct {
 	int (*init)(MACHINE_t* machine);
 	uint8_t video;
 	double speed;
+	uint64_t hwflags;
 } MACHINEDEF_t;
 
 int machine_init_generic_xt(MACHINE_t* machine);

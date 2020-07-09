@@ -211,7 +211,7 @@ void blaster_writecmd(BLASTER_t* blaster, uint8_t value) {
 		blaster_putreadbuf(blaster, 0);
 		break;
 	default:
-		debug_log(DEBUG_INFO, "[BLASTER] Unrecognized command: 0x%02X\r\n", value);
+		debug_log(DEBUG_ERROR, "[BLASTER] Unrecognized command: 0x%02X\r\n", value);
 	}
 
 	blaster->lastcmd = value;
@@ -288,6 +288,7 @@ int16_t blaster_getSample(BLASTER_t* blaster) {
 }
 
 void blaster_init(BLASTER_t* blaster, I8237_t* i8237, I8259_t* i8259, uint16_t base, uint8_t dma, uint8_t irq) {
+	debug_log(DEBUG_INFO, "[BLASTER] Initializing Sound Blaster 2.0 at base port 0x%03X, IRQ %u, DMA %u\r\n", base, irq, dma);
 	memset(blaster, 0, sizeof(BLASTER_t));
 	blaster->i8237 = i8237;
 	blaster->i8259 = i8259;

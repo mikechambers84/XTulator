@@ -77,6 +77,8 @@ volatile uint8_t cga_doDraw = 1;
 int cga_init() {
 	int x, y;
 
+	debug_log(DEBUG_INFO, "[CGA] Initializing CGA video device\r\n");
+
 	if (utility_loadFile(cga_font, 4096, "roms/video/cgachar.bin")) {
 		debug_log(DEBUG_ERROR, "[CGA] Failed to load character generator ROM\r\n");
 		return -1;

@@ -171,6 +171,7 @@ void uart_rxdata(UART_t* uart, uint8_t value) {
 }
 
 void uart_init(UART_t* uart, I8259_t* i8259, uint16_t base, uint8_t irq, void (*tx)(void*, uint8_t), void* udata, void (*mcr)(void*, uint8_t), void* udata2) {
+	debug_log(DEBUG_INFO, "[UART] Initializing 8250 UART at base port 0x%03X, IRQ %u\r\n", base, irq);
 	memset(uart, 0, sizeof(UART_t));
 	uart->i8259 = i8259;
 	uart->irq = irq;

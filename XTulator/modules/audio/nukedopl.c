@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../../ports.h"
+#include "../../debuglog.h"
 #include "nukedopl.h"
 
 #define RSM_FRAC    10
@@ -1418,6 +1419,7 @@ void OPL3_write(opl3_chip* chip, uint32_t portnum, uint8_t value) {
 }
 
 void OPL3_init(opl3_chip* chip) {
+    debug_log(DEBUG_INFO, "[OPL] Initializing OPL2\r\n");
     OPL3_Reset(chip, SAMPLE_RATE);
     ports_cbRegister(0x388, 2, (void*)OPL3_read, NULL, (void*)OPL3_write, NULL, chip);
 }

@@ -81,5 +81,6 @@ void mouse_rxpoll(void* dummy) {
 }
 
 void mouse_init(UART_t* uart) {
+	debug_log(DEBUG_INFO, "[MOUSE] Initializing Microsoft-compatible serial mouse\r\n");
 	mouse_uart = uart;
 }

@@ -79,6 +79,8 @@ volatile uint16_t vga_curScanline = 0;
 int vga_init() {
 	int x, y, i;
 
+	debug_log(DEBUG_INFO, "[VGA] Initializing VGA video device\r\n");
+
 	for (y = 0; y < 400; y++) {
 		for (x = 0; x < 640; x++) {
 			vga_framebuffer[y][x] = vga_color(0);

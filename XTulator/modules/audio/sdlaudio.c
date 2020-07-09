@@ -165,8 +165,12 @@ void sdlaudio_generateSample(void* dummy) {
 
 	val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker);
 	//val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
-	val += OPL3_getSample(&sdlaudio_useMachine->OPL3);
-	val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;
+	if (sdlaudio_useMachine->mixOPL) {
+		val += OPL3_getSample(&sdlaudio_useMachine->OPL3);
+	}
+	if (sdlaudio_useMachine->mixBlaster) {
+		val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;
+	}
 
 	sdlaudio_bufferSample(val);
 }

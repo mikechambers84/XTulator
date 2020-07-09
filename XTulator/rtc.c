@@ -26,6 +26,7 @@
 #include <string.h>
 #include "config.h"
 #include "ports.h"
+#include "debuglog.h"
 
 #ifdef _WIN32
 
@@ -130,5 +131,6 @@ void rtc_write(void* dummy, uint16_t addr, uint8_t value) {
 }
 
 void rtc_init() {
+	debug_log(DEBUG_INFO, "[RTC] Initializing real time clock\r\n");
 	ports_cbRegister(0x240, 0x18, (void*)rtc_read, NULL, (void*)rtc_write, NULL, NULL);
 }

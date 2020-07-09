@@ -46,7 +46,9 @@
 #endif
 
 extern volatile uint8_t running;
-extern uint8_t videocard;
+extern uint8_t videocard, showMIPS;
 extern double speed, speedarg;
+extern uint32_t baudrate, ramsize;
+extern char* usemachine;
 
 #endif

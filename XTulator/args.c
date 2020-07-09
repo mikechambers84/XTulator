@@ -39,11 +39,6 @@
 #include "modules/video/vga.h"
 #include "debuglog.h"
 
-extern char* usemachine;
-
-extern uint8_t videocard, showMIPS;
-extern uint32_t baudrate, ramsize;
-
 double speedarg = 0;
 
 int args_isMatch(char* s1, char* s2) {
@@ -284,6 +279,7 @@ int args_parse(MACHINE_t* machine, int argc, char* argv[]) {
 				printf("Parameter required for -uart%u. Use -h for help.\r\n", uartnum);
 				return -1;
 			}
+			machine->hwflags |= uartnum ? MACHINE_HW_SKIP_UART1 : MACHINE_HW_SKIP_UART0;
 #ifdef ENABLE_TCP_MODEM
 			if (args_isMatch(argv[i + 1], "tcpmodem")) {
 				i++;
@@ -315,6 +311,35 @@ int args_parse(MACHINE_t* machine, int argc, char* argv[]) {
 				printf("%s is not a valid parameter for -uart%u. Use -h for help.\r\n", argv[i + 1], uartnum);
 				return -1;
 			}
+		}
+		else if (args_isMatch(argv[i], "-hw")) {
+			if ((i + 1) == argc) {
+				printf("Parameter required for -hw. Use -h for help.\r\n");
+				return -1;
+			}
+			if (args_isMatch(argv[i + 1], "opl")) {
+				machine->hwflags |= MACHINE_HW_OPL;
+			}
+			else if (args_isMatch(argv[i + 1], "noopl")) {
+				machine->hwflags |= MACHINE_HW_SKIP_OPL;
+			}
+			else if (args_isMatch(argv[i + 1], "blaster")) {
+				machine->hwflags |= MACHINE_HW_BLASTER;
+			}
+			else if (args_isMatch(argv[i + 1], "noblaster")) {
+				machine->hwflags |= MACHINE_HW_SKIP_BLASTER;
+			}
+			else if (args_isMatch(argv[i + 1], "rtc")) {
+				machine->hwflags |= MACHINE_HW_RTC;
+			}
+			else if (args_isMatch(argv[i + 1], "nortc")) {
+				machine->hwflags |= MACHINE_HW_SKIP_RTC;
+			}
+			else {
+				printf("%s is an invalid hardware option\r\n", argv[i + 1]);
+				return -1;
+			}
+			i++;
 		}
 		else {
 			printf("%s is not a valid parameter. Use -h for help.\r\n", argv[i]);
