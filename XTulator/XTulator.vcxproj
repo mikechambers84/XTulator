@@ -163,6 +163,7 @@
     <ClCompile Include="modules\disk\biosdisk.c" />
     <ClCompile Include="modules\disk\fdc.c" />
     <ClCompile Include="modules\input\mouse.c" />
+    <ClCompile Include="modules\io\ne2000.c" />
     <ClCompile Include="modules\io\tcpmodem.c" />
     <ClCompile Include="modules\video\cga.c" />
     <ClCompile Include="modules\video\sdlconsole.c" />
@@ -195,6 +196,8 @@
     <ClInclude Include="modules\input\input.h" />
     <ClInclude Include="modules\input\mouse.h" />
     <ClInclude Include="modules\input\sdlkeys.h" />
+    <ClInclude Include="modules\io\bswap.h" />
+    <ClInclude Include="modules\io\ne2000.h" />
     <ClInclude Include="modules\io\tcpmodem.h" />
     <ClInclude Include="modules\video\cga.h" />
     <ClInclude Include="modules\video\sdlconsole.h" />

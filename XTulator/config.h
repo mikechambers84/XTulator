@@ -21,9 +21,11 @@
 //#define DEBUG_OPL2
 //#define DEBUG_BLASTER
 //#define DEBUG_FDC
+#define DEBUG_NE2000
 
 #define USE_DISK_HLE
 #define USE_NUKED_OPL
+#define USE_NE2000
 
 #ifdef _WIN32
 #define ENABLE_TCP_MODEM

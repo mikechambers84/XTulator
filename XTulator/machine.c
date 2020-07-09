@@ -40,6 +40,7 @@
 #include "modules/disk/fdc.h"
 #include "modules/input/mouse.h"
 #include "modules/input/input.h"
+#include "modules/io/ne2000.h"
 #include "modules/io/tcpmodem.h"
 #include "modules/video/cga.h"
 #include "modules/video/vga.h"
@@ -136,6 +137,8 @@ const MACHINEMEM_t machine_mem[][10] = {
 
 extern double speed;
 
+uint8_t mac[6] = { 0xac, 0xde, 0x48, 0x88, 0xbb, 0xab };
+
 int machine_init_generic_xt(MACHINE_t* machine) {
 	if (machine == NULL) return -1;
 
@@ -188,6 +191,10 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 		tcpmodem_init(&machine->tcpmodem[1], &machine->UART[1], 23);
 		timing_addTimer(tcpmodem_rxpoll, &machine->tcpmodem[1], baudrate / 9, TIMING_ENABLED);
 	}
+
+#ifdef USE_NE2000
+	ne2000_init(&machine->ne2000, &machine->i8259, 0x300, 2, &mac);
+#endif
 
 	cpu_reset(&machine->CPU);
 #ifndef USE_DISK_HLE

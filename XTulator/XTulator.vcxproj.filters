@@ -144,6 +144,9 @@
     <ClCompile Include="modules\audio\nukedopl.c">
       <Filter>Source Files\modules\audio</Filter>
     </ClCompile>
+    <ClCompile Include="modules\io\ne2000.c">
+      <Filter>Source Files\modules\io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu\cpu.h">
@@ -235,6 +238,12 @@
     </ClInclude>
     <ClInclude Include="modules\audio\nukedopl.h">
       <Filter>Header Files\modules\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\io\ne2000.h">
+      <Filter>Header Files\modules\io</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\io\bswap.h">
+      <Filter>Header Files\modules\io</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

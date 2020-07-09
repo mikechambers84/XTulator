@@ -9,6 +9,7 @@
 #include "chipset/i8237.h"
 #include "chipset/i8255.h"
 #include "chipset/uart.h"
+#include "modules/io/ne2000.h"
 #include "modules/io/tcpmodem.h"
 #include "modules/audio/opl2.h"
 #include "modules/audio/nukedopl.h"
@@ -60,6 +61,9 @@ typedef struct {
 	BLASTER_t blaster;
 	uint8_t mixBlaster;
 	PCSPEAKER_t pcspeaker;
+#ifdef USE_NE2000
+	NE2000_t ne2000;
+#endif
 	KEYSTATE_t KeyState;
 	FDC_t fdc;
 	uint64_t hwflags;
