@@ -39,8 +39,6 @@ uint8_t nulldump[2048];
 // hit the unclear completely full buffer condition.
 #define BX_NE2K_NEVER_FULL_RING (1)
 
-static void NE2000_tx_event(int val, void* p);
-
 static void ne2000_setirq(NE2000_t* ne2000, uint8_t irq)
 {
     ne2000->base_irq = (int)irq;
@@ -81,7 +79,7 @@ static void ne2000_reset(int type, void* p)
     memset(&ne2000->DCR, 0, sizeof(ne2000->DCR));
     memset(&ne2000->TCR, 0, sizeof(ne2000->TCR));
     memset(&ne2000->TSR, 0, sizeof(ne2000->TSR));
-    //memset(&ne2000->RCR, 0, sizeof(ne2000->RCR));
+    memset(&ne2000->RCR, 0, sizeof(ne2000->RCR));
     memset(&ne2000->RSR, 0, sizeof(ne2000->RSR));
     ne2000->tx_timer_active = 0;
     ne2000->local_dma = 0;
@@ -99,8 +97,6 @@ static void ne2000_reset(int type, void* p)
     ne2000->tallycnt_1 = 0;
     ne2000->tallycnt_2 = 0;
 
-    //memset( & ne2000->physaddr, 0, sizeof(ne2000->physaddr));
-    //memset( & ne2000->mchash, 0, sizeof(ne2000->mchash));
     ne2000->curr_page = 0;
 
     ne2000->rempkt_ptr = 0;
@@ -252,10 +248,6 @@ void ne2000_dma_write(int io_len, void* p)
         ne2000->ISR.rdma_done = 1;
         if (ne2000->IMR.rdma_inte) {
             i8259_doirq(ne2000->i8259, ne2000->base_irq);
-            //doirq(ne2000->base_irq);
-            //picint(1 << ne2000->base_irq);
-            //picintc(1 << ne2000->base_irq);
-            //DEV_pic_raise_irq(ne2000->base_irq);
         }
     }
 }
@@ -275,7 +267,7 @@ void ne2000_asic_write_w(uint32_t offset, uint16_t value, void* p)
     }
     else {
         /* 8 bit access */
-        ne2000_chipmem_write_b(ne2000->remote_dma, value, ne2000);
+        ne2000_chipmem_write_b(ne2000->remote_dma, (uint8_t)value, ne2000);
         ne2000_dma_write(1, ne2000);
     }
 }
@@ -295,7 +287,7 @@ void ne2000_asic_write_b(uint32_t offset, uint8_t value, void* p)
         ne2000_asic_write_w(offset, value, p);
 }
 
-uint16_t ne2000_reset_read(uint32_t offset, void* p)
+uint8_t ne2000_reset_read(uint32_t offset, void* p)
 {
     NE2000_t* ne2000 = (NE2000_t*)p;
     ne2000_reset(BX_RESET_SOFTWARE, ne2000);
@@ -311,7 +303,7 @@ void ne2000_reset_write(uint32_t offset, uint16_t value, void* p)
 // mainline when the CPU attempts a read in the i/o space registered
 // by this ne2000 instance
 //
-uint16_t ne2000_read(uint32_t address, void* p)
+uint8_t ne2000_read(uint32_t address, void* p)
 {
     NE2000_t* ne2000 = (NE2000_t*)p;
     int ret;
@@ -534,8 +526,6 @@ uint16_t ne2000_read(uint32_t address, void* p)
             break;
 
         case 3:
-            //if (network_card_current == 1)  fatal("ne2000 unknown value of pgsel in read - %d\n", ne2000->CR.pgsel); //todo
-
             switch (address)
             {
             case 0:
@@ -569,7 +559,7 @@ uint16_t ne2000_read(uint32_t address, void* p)
 // mainline when the CPU attempts a write in the i/o space registered
 // by this ne2000 instance
 //
-void ne2000_write(uint32_t address, uint16_t value, void* p)
+void ne2000_write(uint32_t address, uint8_t value, void* p)
 {
     NE2000_t* ne2000 = (NE2000_t*)p;
 
@@ -590,7 +580,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
         if ((value & 0x38) == 0x00) {
             pclog("CR write - invalid rDMA value 0\n");
             value |= 0x20; /* dma_cmd == 4 is a safe default */
-                //value = 0x22; /* dma_cmd == 4 is a safe default */
         }
 
         // Check for s/w reset
@@ -603,8 +592,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
         }
 
         ne2000->CR.rdma_cmd = (value & 0x38) >> 3;
-
-        //printf("RDMA cmd: %02X\r\n", ne2000->CR.rdma_cmd);
 
         // If start command issued, the RST bit in the ISR
         // must be cleared
@@ -641,15 +628,13 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
                 // do a TX interrupt
                 // Generate an interrupt if not masked and not one in progress
                 if (ne2000->IMR.tx_inte && !ne2000->ISR.pkt_tx) {
-                    //LOG_MSG("tx complete interrupt");
                     i8259_doirq(ne2000->i8259, ne2000->base_irq);
-                    //doirq(ne2000->base_irq);
-                    //picint(1 << ne2000->base_irq);
                 }
                 ne2000->ISR.pkt_tx = 1;
             }
         }
         else if (ne2000->CR.rdma_cmd & 0x04) {
+            double microsecs;
             // start-tx and no loopback
             if (ne2000->CR.stop || !ne2000->CR.start)
                 pclog("CR write - tx start, dev in reset\n");
@@ -658,26 +643,17 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
                 pclog("CR write - tx start, tx bytes == 0\n");
 
             // Send the packet to the system driver
-                /* TODO: Transmit packet */
-            //BX_NE2K_THIS ethdev->sendpkt(& ne2000->mem[ne2000->tx_page_start*256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
-                //pcap_sendpacket(adhandle,&ne2000->mem[ne2000->tx_page_start*256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
-            //sendpkt(&ne2000->mem[ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
             pcap_txPacket((u_char*)&ne2000->mem[ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART], (int)ne2000->tx_bytes);
 
-            NE2000_tx_event(value, ne2000);
+            microsecs = (double)((64 + 96 + 4 * 8 + ne2000->tx_bytes * 8) / 10);
+            microsecs *= ((double)timing_getFreq() / 1000000);
+            NE2000_tx_event((uint64_t)microsecs, ne2000);
             // Schedule a timer to trigger a tx-complete interrupt
             // The number of microseconds is the bit-time / 10.
             // The bit-time is the preamble+sfd (64 bits), the
             // inter-frame gap (96 bits), the CRC (4 bytes), and the
             // the number of bits in the frame (s.tx_bytes * 8).
             //
-
-                /* TODO: Code transmit timer */
-                /*
-            bx_pc_system.activate_timer(ne2000->tx_timer_index,
-                                        (64 + 96 + 4*8 + ne2000->tx_bytes*8)/10,
-                                        0); // not continuous
-                */
         } // end transmit-start branch
 
         // Linux probes for an interrupt by setting up a remote-DMA read
@@ -689,10 +665,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
             ne2000->ISR.rdma_done = 1;
             if (ne2000->IMR.rdma_inte) {
                 i8259_doirq(ne2000->i8259, ne2000->base_irq);
-                //doirq(ne2000->base_irq);
-                //picint(1 << ne2000->base_irq);
-                //picintc(1 << ne2000->base_irq);
-      //DEV_pic_raise_irq(ne2000->base_irq);
             }
         }
     }
@@ -757,11 +729,9 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
                     (ne2000->IMR.rxerr_inte << 2) |
                     (ne2000->IMR.tx_inte << 1) |
                     (ne2000->IMR.rx_inte));
-                if (value == 0)
+                if (value == 0) {
                     i8259_doirq(ne2000->i8259, ne2000->base_irq);
-                    //doirq(ne2000->base_irq);
-                //picintc(1 << ne2000->base_irq);
-            //DEV_pic_lower_irq(ne2000->base_irq);
+                }
                 break;
 
             case 0x8:  // RSAR0
@@ -825,14 +795,12 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
                 // Inhibit-CRC not supported.
                 if (value & 0x01)
                 {
-                    //fatal("ne2000 TCR write, inhibit-CRC not supported\n");
                     pclog("ne2000 TCR write, inhibit-CRC not supported\n");
                     return;
                 }
 
                 // Auto-transmit disable very suspicious
                 if (value & 0x08) {
-                    //fatal("ne2000 TCR write, auto transmit disable not supported\n");
                     pclog("ne2000 TCR write, auto transmit disable not supported\n");
                 }
 
@@ -877,9 +845,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
                 if (ne2000->ISR.pkt_tx && ne2000->IMR.tx_inte) {
                     pclog("tx irq retrigger\n");
                     i8259_doirq(ne2000->i8259, ne2000->base_irq);
-                    //doirq(ne2000->base_irq);
-                    //picint(1 << ne2000->base_irq);
-                    //picintc(1 << ne2000->base_irq);
                 }
                 break;
             }
@@ -965,7 +930,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
             case 0xd:
             case 0xe:
             case 0xf:
-                //fatal("page 2 write to reserved offset %0x\n", address);
                 pclog("ne2000 page 2 write to reserved offset %0x\n", address);
             default:
                 break;
@@ -973,12 +937,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
             break;
 
         case 3:
-            /*if (network_card_current == 1)
-            {
-              pclog("ne2000 unknown value of pgsel in write - %d\n", ne2000->CR.pgsel);
-              break;
-            }*/ //todo
-
             switch (address)
             {
             case 0:
@@ -1000,7 +958,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
             break;
 
         default:
-            //fatal("ne2K: unknown value of pgsel in write - %d\n", ne2000->CR.pgsel);
             pclog("ne2000 unknown value of pgsel in write - %d\n", ne2000->CR.pgsel);
             break;
         }
@@ -1054,17 +1011,8 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
     uint8_t* startptr;
     static uint8_t bcast_addr[6] = { 0xff,0xff,0xff,0xff,0xff,0xff };
 
-    /*if(io_len != 60) {
-          pclog("rx_frame with length %d\n", io_len);
-    }*/
-
-    //LOG_MSG("stop=%d, pagestart=%x, dcr_loop=%x, tcr_loopcntl=%x",
-    //      ne2000->CR.stop, ne2000->page_start,
-    //      ne2000->DCR.loop, ne2000->TCR.loop_cntl);
     if ((ne2000->CR.stop != 0) ||
-        (ne2000->page_start == 0) /*||
-        ((ne2000->DCR.loop == 0) &&
-         (ne2000->TCR.loop_cntl != 0))*/) {
+        (ne2000->page_start == 0)) {
         return;
     }
 
@@ -1182,13 +1130,9 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
     ne2000->ISR.pkt_rx = 1;
 
     if (ne2000->IMR.rx_inte) {
-        //LOG_MSG("packet rx interrupt");
         pclog("packet rx interrupt\n");
         i8259_doirq(ne2000->i8259, ne2000->base_irq);
-        //doirq(ne2000->base_irq);
-        //picint(1 << ne2000->base_irq);
-  //DEV_pic_raise_irq(ne2000->base_irq);
-    } //else LOG_MSG("no packet rx interrupt");
+    }
 
 }
 
@@ -1198,77 +1142,22 @@ void NE2000_tx_timer(void* p)
 
     timing_timerDisable(ne2000->tx_timer);
 
-    /*debug_log(DEBUG_INFO, "send packet\r\n");
-    {
-        uint32_t i, j;
-        j = (ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART) + ne2000->tx_bytes;
-        for (i = (ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART); i < j; i++) {
-            debug_log(DEBUG_INFO, "%02X ", ne2000->mem[i]);
-        }
-        debug_log(DEBUG_INFO, "\r\n\r\n");
-    }*/
-
     pclog("tx_timer\n");
     ne2000->TSR.tx_ok = 1;
     // Generate an interrupt if not masked and not one in progress
     if (ne2000->IMR.tx_inte && !ne2000->ISR.pkt_tx) {
-        //LOG_MSG("tx complete interrupt");
         pclog("tx complete interrupt\n");
         i8259_doirq(ne2000->i8259, ne2000->base_irq);
-    } //else        LOG_MSG("no tx complete interrupt");
+    }
     ne2000->ISR.pkt_tx = 1;
     ne2000->tx_timer_active = 0;
 }
 
-static void NE2000_tx_event(int val, void* p)
+void NE2000_tx_event(uint64_t interval, void* p)
 {
     NE2000_t* ne2000 = (NE2000_t*)p;
-    NE2000_tx_timer(ne2000);
-    //timing_timerEnable(ne2000->tx_timer); //TODO: timing
-}
-
-static void ne2000_poller(void* p) //todo
-{
-    NE2000_t* ne2000 = (NE2000_t*)p;
-    struct queuepacket* qp;
-    const unsigned char* data;
-    //struct pcap_pkthdr h;
-
-
-    int res;
-    /*if(net_is_slirp) {
-            while(QueuePeek(slirpq)>0)
-                    {
-                    qp=QueueDelete(slirpq);
-                    if((ne2000->DCR.loop == 0) || (ne2000->TCR.loop_cntl != 0))
-                            {
-                            free(qp);
-                            return;
-                            }
-                    ne2000_rx_frame(ne2000,&qp->data,qp->len);
-                    pclog("ne2000 inQ:%d  got a %dbyte packet @%d\n",QueuePeek(slirpq),qp->len,qp);
-                    free(qp);
-                    }
-            fizz++;
-            if(fizz>1200){fizz=0;slirp_tic();}
-            }//end slirp
-    if(net_is_pcap  && net_pcap!=NULL)
-            {
-            data=_pcap_next(net_pcap,&h);
-            if(data==0x0){goto WTF;}
-            if((memcmp(data+6,maclocal,6))==0)
-                pclog("ne2000 we just saw ourselves\n");
-            else {
-                 if((ne2000->DCR.loop == 0) || (ne2000->TCR.loop_cntl != 0))
-                    {
-                    return;
-                    }
-                    pclog("ne2000 pcap received a frame %d bytes\n",h.caplen);
-                    ne2000_rx_frame(ne2000,data,h.caplen);
-                 }
-            WTF:
-                    {}
-            }*/
+    timing_updateInterval(ne2000->tx_timer, interval);
+    timing_timerEnable(ne2000->tx_timer); //TODO: timing
 }
 
 
@@ -1332,14 +1221,6 @@ void ne2000_portResetWrite(NE2000_t* ne2000, uint32_t addr, uint8_t value) {
 
 void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint32_t baseport, uint8_t irq, uint8_t* macaddr) {
     debug_log(DEBUG_INFO, "[NE2000] Initializing NE2000 Ethernet adapter at 0x%03X, IRQ %u\r\n", baseport, irq);
-    /*set_port_read_redirector(baseport, baseport + 0x0F, ne2k_read);
-    set_port_write_redirector(baseport, baseport + 0x0F, ne2k_write);
-    set_port_read_redirector(baseport + 0x10, baseport + 0x1E, ne2k_asic_read_b);
-    set_port_write_redirector(baseport + 0x10, baseport + 0x1E, ne2k_asic_write_b);
-    set_port_read_redirector(baseport + 0x1F, baseport + 0x1F, ne2k_reset_read);
-    set_port_write_redirector(baseport + 0x1F, baseport + 0x1F, ne2k_reset_write);
-    set_port_read_redirector_16(baseport + 0x10, baseport + 0x1F, ne2k_asic_read_w);
-    set_port_write_redirector_16(baseport + 0x10, baseport + 0x1F, ne2k_asic_write_w);*/
 
     ne2000->i8259 = i8259;
 
