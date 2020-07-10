@@ -1,3 +1,7 @@
+/*
+    Shamelessly stolen and modified from Bochs.
+*/
+
 #include "../../config.h"
 
 #ifdef USE_NE2000
@@ -10,6 +14,7 @@
 
 #include "../../chipset/i8259.h"
 #include "../../ports.h"
+#include "../../timing.h"
 #include "../../debuglog.h"
 #include "ne2000.h"
 
@@ -30,10 +35,6 @@ uint8_t nulldump[2048];
 // hit the unclear completely full buffer condition.
 #define BX_NE2K_NEVER_FULL_RING (1)
 
-uint8_t rtl8029as_eeprom[128];
-
-NE2000_t ne2000_dev;
-
 static void NE2000_tx_event(int val, void* p);
 
 void ne2000_rx_frame(void* p, const void* buf, int io_len);
@@ -42,13 +43,9 @@ int ne2000_can_receive() {
     return 1;
 }
 
-void ne2000_receive(const uint8_t* buf, int size) {
-    ne2000_rx_frame(&ne2000_dev, buf, size);
-}
-
-static void ne2000_setirq(NE2000_t* ne2000, int irq)
+static void ne2000_setirq(NE2000_t* ne2000, uint8_t irq)
 {
-    ne2000->base_irq = irq;
+    ne2000->base_irq = (int)irq;
 }
 //
 // reset - restore state to power-up, cancelling all i/o
@@ -86,7 +83,7 @@ static void ne2000_reset(int type, void* p)
     memset(&ne2000->DCR, 0, sizeof(ne2000->DCR));
     memset(&ne2000->TCR, 0, sizeof(ne2000->TCR));
     memset(&ne2000->TSR, 0, sizeof(ne2000->TSR));
-    //memset( & ne2000->RCR, 0, sizeof(ne2000->RCR));
+    //memset(&ne2000->RCR, 0, sizeof(ne2000->RCR));
     memset(&ne2000->RSR, 0, sizeof(ne2000->RSR));
     ne2000->tx_timer_active = 0;
     ne2000->local_dma = 0;
@@ -121,9 +118,6 @@ static void ne2000_reset(int type, void* p)
     ne2000->DCR.longaddr = 1;
 
     i8259_doirq(ne2000->i8259, ne2000->base_irq);
-    //picint(1 << ne2000->base_irq);
-    //picintc(1 << ne2000->base_irq);
-    //DEV_pic_lower_irq(ne2000->base_irq);
 }
 
 #include "bswap.h"
@@ -215,10 +209,6 @@ uint16_t ne2000_dma_read(int io_len, void* p)
         ne2000->ISR.rdma_done = 1;
         if (ne2000->IMR.rdma_inte) {
             i8259_doirq(ne2000->i8259, ne2000->base_irq);
-            //doirq(ne2000->base_irq);
-            //picint(1 << ne2000->base_irq);
-            //picintc(1 << ne2000->base_irq);
-    //DEV_pic_raise_irq(ne2000->base_irq);
         }
     }
     return (0);
@@ -380,6 +370,14 @@ uint16_t ne2000_read(uint32_t address, void* p)
                 break;
 
             case 0x7:  // ISR
+                /*printf("ISR: %02X\r\n", ((ne2000->ISR.reset << 7) |
+                    (ne2000->ISR.rdma_done << 6) |
+                    (ne2000->ISR.cnt_oflow << 5) |
+                    (ne2000->ISR.overwrite << 4) |
+                    (ne2000->ISR.tx_err << 3) |
+                    (ne2000->ISR.rx_err << 2) |
+                    (ne2000->ISR.pkt_tx << 1) |
+                    (ne2000->ISR.pkt_rx)));*/
                 return ((ne2000->ISR.reset << 7) |
                     (ne2000->ISR.rdma_done << 6) |
                     (ne2000->ISR.cnt_oflow << 5) |
@@ -616,9 +614,11 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
 
         ne2000->CR.rdma_cmd = (value & 0x38) >> 3;
 
+        printf("RDMA cmd: %02X\r\n", ne2000->CR.rdma_cmd);
+
         // If start command issued, the RST bit in the ISR
         // must be cleared
-        if ((value & 0x02) && !ne2000->CR.start) {
+        if ((ne2000->CR.rdma_cmd & 0x02) && !ne2000->CR.start) {
             ne2000->ISR.reset = 0;
         }
 
@@ -638,7 +638,7 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
         }
 
         // Check for start-tx
-        if ((value & 0x04) && ne2000->TCR.loop_cntl) {
+        if ((ne2000->CR.rdma_cmd & 0x04) && ne2000->TCR.loop_cntl) {
             // loopback mode
             if (ne2000->TCR.loop_cntl != 1) {
                 pclog("Loop mode %d not supported.\n", ne2000->TCR.loop_cntl);
@@ -659,7 +659,7 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
                 ne2000->ISR.pkt_tx = 1;
             }
         }
-        else if (value & 0x04) {
+        else if (ne2000->CR.rdma_cmd & 0x04) {
             // start-tx and no loopback
             if (ne2000->CR.stop || !ne2000->CR.start)
                 pclog("CR write - tx start, dev in reset\n");
@@ -673,15 +673,6 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
                 //pcap_sendpacket(adhandle,&ne2000->mem[ne2000->tx_page_start*256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
             //sendpkt(&ne2000->mem[ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
             //TODO: add actual packet sending in XTulator with pcap
-            debug_log(DEBUG_INFO, "send packet\r\n");
-            {
-                uint32_t i, j;
-                j = (ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART) + ne2000->tx_bytes;
-                for (i = (ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART); i < j; i++) {
-                    debug_log(DEBUG_INFO, "%02X ", ne2000->mem[i]);
-                }
-                debug_log(DEBUG_INFO, "\r\n\r\n");
-            }
 
             NE2000_tx_event(value, ne2000);
             // Schedule a timer to trigger a tx-complete interrupt
@@ -1215,6 +1206,18 @@ void NE2000_tx_timer(void* p)
 {
     NE2000_t* ne2000 = (NE2000_t*)p;
 
+    timing_timerDisable(ne2000->tx_timer);
+
+    debug_log(DEBUG_INFO, "send packet\r\n");
+    {
+        uint32_t i, j;
+        j = (ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART) + ne2000->tx_bytes;
+        for (i = (ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART); i < j; i++) {
+            debug_log(DEBUG_INFO, "%02X ", ne2000->mem[i]);
+        }
+        debug_log(DEBUG_INFO, "\r\n\r\n");
+    }
+
     pclog("tx_timer\n");
     ne2000->TSR.tx_ok = 1;
     // Generate an interrupt if not masked and not one in progress
@@ -1222,9 +1225,6 @@ void NE2000_tx_timer(void* p)
         //LOG_MSG("tx complete interrupt");
         pclog("tx complete interrupt\n");
         i8259_doirq(ne2000->i8259, ne2000->base_irq);
-        //doirq(ne2000->base_irq);
-        //picint(1 << ne2000->base_irq);
-  //DEV_pic_raise_irq(ne2000->base_irq);
     } //else        LOG_MSG("no tx complete interrupt");
     ne2000->ISR.pkt_tx = 1;
     ne2000->tx_timer_active = 0;
@@ -1233,7 +1233,8 @@ void NE2000_tx_timer(void* p)
 static void NE2000_tx_event(int val, void* p)
 {
     NE2000_t* ne2000 = (NE2000_t*)p;
-    NE2000_tx_timer(ne2000);
+    //NE2000_tx_timer(ne2000);
+    timing_timerEnable(ne2000->tx_timer);
 }
 
 static void ne2000_poller(void* p) //todo
@@ -1278,31 +1279,6 @@ static void ne2000_poller(void* p) //todo
             WTF:
                     {}
             }*/
-}
-
-
-uint8_t ne2000_pci_regs[256];
-
-void ne2000_io_set(uint16_t addr, NE2000_t* ne2000)
-{
-    /*io_sethandler(addr, 0x0010, ne2000_read, NULL, NULL, ne2000_write, NULL, NULL, ne2000);
-    io_sethandler(addr+0x10, 0x0010, ne2000_asic_read_b, ne2000_asic_read_w, NULL, ne2000_asic_write_b, ne2000_asic_write_w, NULL, ne2000);
-    io_sethandler(addr+0x1f, 0x0001, ne2000_reset_read, NULL, NULL, ne2000_reset_write, NULL, NULL, ne2000);*/
-}
-
-void ne2000_io_remove(uint16_t addr, NE2000_t* ne2000)
-{
-    /*    io_removehandler(addr, 0x0010, ne2000_read, NULL, NULL, ne2000_write, NULL, NULL, ne2000);
-        io_removehandler(addr+0x10, 0x0010, ne2000_asic_read_b, ne2000_asic_read_w, NULL, ne2000_asic_write_b, ne2000_asic_write_w, NULL, ne2000);
-        io_removehandler(addr+0x1f, 0x0001, ne2000_reset_read, NULL, NULL, ne2000_reset_write, NULL, NULL, ne2000);*/
-}
-
-void ne2000_isa_init()
-{
-    //disable_netbios = 1;
-    //mem_mapping_disable(&netbios_mapping);
-    //memset(netbios, 0, 32768);
-    *(uint32_t*)&(ne2000_pci_regs[0x30]) = 0;
 }
 
 
@@ -1364,7 +1340,7 @@ void ne2000_portResetWrite(NE2000_t* ne2000, uint32_t addr, uint8_t value) {
     ne2000_reset_write(addr, (uint16_t)value, ne2000);
 }
 
-void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint16_t baseport, uint8_t irq, uint8_t* macaddr) {
+void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint32_t baseport, uint8_t irq, uint8_t* macaddr) {
     debug_log(DEBUG_INFO, "[NE2000] Initializing NE2000 Ethernet adapter at 0x%03X, IRQ %u\r\n", baseport, irq);
     /*set_port_read_redirector(baseport, baseport + 0x0F, ne2k_read);
     set_port_write_redirector(baseport, baseport + 0x0F, ne2k_write);
@@ -1377,15 +1353,15 @@ void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint16_t baseport, uint8_t ir
 
     ne2000->i8259 = i8259;
 
-    ports_cbRegister(baseport, 16, ne2000_portReadB, NULL, ne2000_portWriteB, NULL, ne2000);
-    ports_cbRegister(baseport + 0x10, 15, ne2000_portAsicReadB, ne2000_portAsicReadW, ne2000_portAsicWriteB, ne2000_portAsicWriteW, ne2000);
-    ports_cbRegister(baseport + 0x1F, 1, ne2000_portResetRead, NULL, ne2000_portResetWrite, NULL, ne2000);
+    ports_cbRegister(baseport, 0x10, ne2000_portReadB, NULL, ne2000_portWriteB, NULL, ne2000);
+    ports_cbRegister(baseport + 0x10, 0x10, ne2000_portAsicReadB, ne2000_portAsicReadW, ne2000_portAsicWriteB, ne2000_portAsicWriteW, ne2000);
+    ports_cbRegister(baseport + 0x1F, 0x01, ne2000_portResetRead, NULL, ne2000_portResetWrite, NULL, ne2000);
 
-    ne2000_io_set(baseport, ne2000);
     ne2000_setirq(ne2000, irq);
     memcpy(ne2000->physaddr, macaddr, 6);
-    ne2000_isa_init();
     ne2000_reset(BX_RESET_HARDWARE, ne2000);
+    
+    ne2000->tx_timer = timing_addTimer(NE2000_tx_timer, ne2000, 1000, TIMING_DISABLED);
 }
 
 #endif

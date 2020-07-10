@@ -8,7 +8,7 @@
 #define  BX_NE2K_MEMSTART  (16*1024)
 #define  BX_NE2K_MEMEND    (BX_NE2K_MEMSTART + BX_NE2K_MEMSIZ)
 
-typedef struct NE2000_t
+typedef struct
 {
     //
     // ne2k register state
@@ -163,10 +163,13 @@ typedef struct NE2000_t
     int    tx_timer_index;
     int    tx_timer_active;
 
+    //XTulator stuff
     I8259_t* i8259;
+    uint32_t tx_timer;
+
 } NE2000_t;
 
 //BELOW ARE PROTOTYPES FOR XTulator
-void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint16_t baseport, uint8_t irq, uint8_t* macaddr);
+void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint32_t baseport, uint8_t irq, uint8_t* macaddr);
 
 #endif
