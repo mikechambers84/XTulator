@@ -40,7 +40,14 @@
 #include "modules/disk/fdc.h"
 #include "modules/input/mouse.h"
 #include "modules/input/input.h"
+#ifdef USE_NE2000
 #include "modules/io/ne2000.h"
+#ifdef _WIN32
+#include "modules/io/pcap-win32.h"
+#else
+#include "modules/io/pcap-other.h"
+#endif
+#endif
 #include "modules/io/tcpmodem.h"
 #include "modules/video/cga.h"
 #include "modules/video/vga.h"
@@ -193,7 +200,12 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 	}
 
 #ifdef USE_NE2000
-	ne2000_init(&machine->ne2000, &machine->i8259, 0x300, 2, &mac);
+	ne2000_init(&machine->ne2000, &machine->i8259, 0x300, 2, (uint8_t*)&mac);
+	if (machine->pcap_if > -1) {
+		if (pcap_init(&machine->ne2000, machine->pcap_if)) {
+			return -1;
+		}
+	}
 #endif
 
 	cpu_reset(&machine->CPU);

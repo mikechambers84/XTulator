@@ -32,6 +32,13 @@
 #include "modules/disk/biosdisk.h"
 #include "modules/video/sdlconsole.h"
 #include "modules/audio/sdlaudio.h"
+#ifdef USE_NE2000
+#ifdef _WIN32
+#include "modules/io/pcap-win32.h"
+#else
+#include "modules/io/pcap-other.h"
+#endif
+#endif
 
 char* usemachine = "generic_xt"; //default
 
@@ -70,6 +77,7 @@ int main(int argc, char *argv[]) {
 	timing_init();
 	memory_init();
 
+	machine.pcap_if = -1;
 	if (args_parse(&machine, argc, argv)) {
 		return -1;
 	}
@@ -116,7 +124,7 @@ int main(int argc, char *argv[]) {
 			goCPU = 0;
 		}
 		timing_loop();
-		if (++curloop == 100) { //don't do this too often, it seems to be expensive
+		if (++curloop == 100) {
 			switch (sdlconsole_loop()) {
 			case SDLCONSOLE_EVENT_KEY:
 				machine.KeyState.scancode = sdlconsole_getScancode();
@@ -141,6 +149,10 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 			}
+
+#ifdef USE_NE2000
+			pcap_rxPacket();
+#endif
 			curloop = 0;
 		}
 	}

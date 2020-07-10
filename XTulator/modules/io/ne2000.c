@@ -11,7 +11,11 @@
 #include <string.h>
 #include <time.h>
 #include <stdint.h>
-
+#ifdef _WIN32
+#include "pcap-win32.h"
+#else
+#include "pcap-other.h"
+#endif
 #include "../../chipset/i8259.h"
 #include "../../ports.h"
 #include "../../timing.h"
@@ -36,12 +40,6 @@ uint8_t nulldump[2048];
 #define BX_NE2K_NEVER_FULL_RING (1)
 
 static void NE2000_tx_event(int val, void* p);
-
-void ne2000_rx_frame(void* p, const void* buf, int io_len);
-
-int ne2000_can_receive() {
-    return 1;
-}
 
 static void ne2000_setirq(NE2000_t* ne2000, uint8_t irq)
 {
@@ -219,7 +217,7 @@ uint16_t ne2000_asic_read_w(uint32_t offset, void* p)
     NE2000_t* ne2000 = (NE2000_t*)p;
     int retval;
 
-    if ((ne2000->DCR.wdsize & 0x01) && (ne2000->remote_dma < 32)) { //todo: why do i need this hack??
+    if (ne2000->DCR.wdsize & 0x01) {
         /* 16 bit access */
         retval = ne2000_chipmem_read_w(ne2000->remote_dma, ne2000);
         ne2000_dma_read(2, ne2000);
@@ -270,7 +268,7 @@ void ne2000_asic_write_w(uint32_t offset, uint16_t value, void* p)
 
     if (ne2000->remote_bytes == 0)
         return;
-    if ((ne2000->DCR.wdsize & 0x01) && (ne2000->remote_dma < 32)) { //todo: why do i need this hack??
+    if (ne2000->DCR.wdsize & 0x01) { //todo: why do i need this hack??
         /* 16 bit access */
         ne2000_chipmem_write_w(ne2000->remote_dma, value, ne2000);
         ne2000_dma_write(2, ne2000);
@@ -370,14 +368,6 @@ uint16_t ne2000_read(uint32_t address, void* p)
                 break;
 
             case 0x7:  // ISR
-                /*printf("ISR: %02X\r\n", ((ne2000->ISR.reset << 7) |
-                    (ne2000->ISR.rdma_done << 6) |
-                    (ne2000->ISR.cnt_oflow << 5) |
-                    (ne2000->ISR.overwrite << 4) |
-                    (ne2000->ISR.tx_err << 3) |
-                    (ne2000->ISR.rx_err << 2) |
-                    (ne2000->ISR.pkt_tx << 1) |
-                    (ne2000->ISR.pkt_rx)));*/
                 return ((ne2000->ISR.reset << 7) |
                     (ne2000->ISR.rdma_done << 6) |
                     (ne2000->ISR.cnt_oflow << 5) |
@@ -614,7 +604,7 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
 
         ne2000->CR.rdma_cmd = (value & 0x38) >> 3;
 
-        printf("RDMA cmd: %02X\r\n", ne2000->CR.rdma_cmd);
+        //printf("RDMA cmd: %02X\r\n", ne2000->CR.rdma_cmd);
 
         // If start command issued, the RST bit in the ISR
         // must be cleared
@@ -672,7 +662,7 @@ void ne2000_write(uint32_t address, uint16_t value, void* p)
             //BX_NE2K_THIS ethdev->sendpkt(& ne2000->mem[ne2000->tx_page_start*256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
                 //pcap_sendpacket(adhandle,&ne2000->mem[ne2000->tx_page_start*256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
             //sendpkt(&ne2000->mem[ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART], ne2000->tx_bytes);
-            //TODO: add actual packet sending in XTulator with pcap
+            pcap_txPacket((u_char*)&ne2000->mem[ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART], (int)ne2000->tx_bytes);
 
             NE2000_tx_event(value, ne2000);
             // Schedule a timer to trigger a tx-complete interrupt
@@ -1208,7 +1198,7 @@ void NE2000_tx_timer(void* p)
 
     timing_timerDisable(ne2000->tx_timer);
 
-    debug_log(DEBUG_INFO, "send packet\r\n");
+    /*debug_log(DEBUG_INFO, "send packet\r\n");
     {
         uint32_t i, j;
         j = (ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART) + ne2000->tx_bytes;
@@ -1216,7 +1206,7 @@ void NE2000_tx_timer(void* p)
             debug_log(DEBUG_INFO, "%02X ", ne2000->mem[i]);
         }
         debug_log(DEBUG_INFO, "\r\n\r\n");
-    }
+    }*/
 
     pclog("tx_timer\n");
     ne2000->TSR.tx_ok = 1;
@@ -1233,8 +1223,8 @@ void NE2000_tx_timer(void* p)
 static void NE2000_tx_event(int val, void* p)
 {
     NE2000_t* ne2000 = (NE2000_t*)p;
-    //NE2000_tx_timer(ne2000);
-    timing_timerEnable(ne2000->tx_timer);
+    NE2000_tx_timer(ne2000);
+    //timing_timerEnable(ne2000->tx_timer); //TODO: timing
 }
 
 static void ne2000_poller(void* p) //todo

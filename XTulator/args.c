@@ -29,7 +29,16 @@
 #include "chipset/i8237.h"
 #include "chipset/i8255.h"
 #include "chipset/uart.h"
+#ifdef ENABLE_TCP_MODEM
 #include "modules/io/tcpmodem.h"
+#endif
+#ifdef USE_NE2000
+#ifdef _WIN32
+#include "modules/io/pcap-win32.h"
+#else
+#include "modules/io/pcap-other.h"
+#endif
+#endif
 #include "modules/input/mouse.h"
 #include "modules/disk/biosdisk.h"
 #include "modules/audio/pcspeaker.h"
@@ -115,6 +124,13 @@ void args_showHelp() {
 	printf("The tcpmodem devices will also listen for incoming connections, by default on port 23. If there is a\r\n");
 	printf("connection, it will provide a RING notification both as text and through the modem status register bit.\r\n");
 	printf("If you are using two tcpmodem devices, you will need to specify an alternate listen port for one of them.\r\n\r\n");
+
+#ifdef USE_NE2000
+	printf("Networking options:\r\n");
+	printf("  -net <id>              Initialize emulated NE2000 adapter using physical interface number specified\r\n");
+	printf("                         by <id>. Use \"-net list\" to display available interfaces. NE2000 will be\r\n");
+	printf("                         available to guest system at base port 0x300, IRQ 2.\r\n\r\n");
+#endif
 
 	printf("Miscellaneous options:\r\n");
 	printf("  -mem <size>            Initialize emulator with only <size> KB of base memory. (Default is 640)\r\n");
@@ -341,6 +357,20 @@ int args_parse(MACHINE_t* machine, int argc, char* argv[]) {
 			}
 			i++;
 		}
+#ifdef USE_NE2000
+		else if (args_isMatch(argv[i], "-net")) {
+			if ((i + 1) == argc) {
+				printf("Parameter required for -list. Use -h for help.\r\n");
+				return -1;
+			}
+			i++;
+			if (args_isMatch(argv[i], "list")) {
+				pcap_listdevs();
+				return -1;
+			}
+			machine->pcap_if = atoi(argv[i]);
+		}
+#endif
 		else {
 			printf("%s is not a valid parameter. Use -h for help.\r\n", argv[i]);
 			return -1;

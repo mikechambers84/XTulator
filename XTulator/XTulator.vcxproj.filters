@@ -147,6 +147,9 @@
     <ClCompile Include="modules\io\ne2000.c">
       <Filter>Source Files\modules\io</Filter>
     </ClCompile>
+    <ClCompile Include="modules\io\pcap-win32.c">
+      <Filter>Source Files\modules\io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu\cpu.h">
@@ -243,6 +246,9 @@
       <Filter>Header Files\modules\io</Filter>
     </ClInclude>
     <ClInclude Include="modules\io\bswap.h">
+      <Filter>Header Files\modules\io</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\io\pcap-win32.h">
       <Filter>Header Files\modules\io</Filter>
     </ClInclude>
   </ItemGroup>

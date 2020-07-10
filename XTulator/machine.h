@@ -67,6 +67,7 @@ typedef struct {
 	KEYSTATE_t KeyState;
 	FDC_t fdc;
 	uint64_t hwflags;
+	int pcap_if;
 } MACHINE_t;
 
 typedef struct {
