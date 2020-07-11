@@ -22,7 +22,7 @@
 //#define DEBUG_BLASTER
 //#define DEBUG_FDC
 //#define DEBUG_NE2000
-#define DEBUG_PCAP
+//#define DEBUG_PCAP
 
 #define USE_DISK_HLE
 #define USE_NUKED_OPL

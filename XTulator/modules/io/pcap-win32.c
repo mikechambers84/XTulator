@@ -100,7 +100,7 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 
 	pcap_ne2000 = ne2000;
 
-	_beginthread(pcap_dispatchThread, 0, NULL);
+	_beginthread((void*)pcap_dispatchThread, 0, NULL);
 
 	return 0;
 }
@@ -119,6 +119,7 @@ void pcap_rx_handler(u_char* param, const struct pcap_pkthdr* header, const u_ch
 
 	while (pcap_havePacket) {}
 
+	//below filters remove the burden of filtering out unwanted packets from the emulated NE2000 driver
 	accept = 1;
 	for (i = 0; i < 6; i++) {
 		if (pkt_data[i] != 0xFF) {
@@ -139,14 +140,14 @@ void pcap_rx_handler(u_char* param, const struct pcap_pkthdr* header, const u_ch
 
 	pcap_len = header->caplen;
 	if (pcap_len > 2048) return;
-	memcpy(pcap_packetData, pkt_data, header->caplen);
+	memcpy((void*)pcap_packetData, pkt_data, header->caplen);
 	pcap_havePacket = 1;
 	//debug_log(DEBUG_INFO, "len:%d\n", header->len);
 }
 
 void pcap_rxPacket() {
 	if (pcap_havePacket) {
-		ne2000_rx_frame(pcap_ne2000, pcap_packetData, pcap_len);
+		ne2000_rx_frame(pcap_ne2000, (void*)pcap_packetData, pcap_len);
 		pcap_havePacket = 0;
 	}
 }

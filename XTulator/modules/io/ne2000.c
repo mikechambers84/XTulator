@@ -615,7 +615,7 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
         }
 
         // Check for start-tx
-        if ((ne2000->CR.rdma_cmd & 0x04) && ne2000->TCR.loop_cntl) {
+        if ((value & 0x04) && ne2000->TCR.loop_cntl) {
             // loopback mode
             if (ne2000->TCR.loop_cntl != 1) {
                 pclog("Loop mode %d not supported.\n", ne2000->TCR.loop_cntl);
@@ -633,7 +633,7 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
                 ne2000->ISR.pkt_tx = 1;
             }
         }
-        else if (ne2000->CR.rdma_cmd & 0x04) {
+        else if (value & 0x04) {
             double microsecs;
             // start-tx and no loopback
             if (ne2000->CR.stop || !ne2000->CR.start)

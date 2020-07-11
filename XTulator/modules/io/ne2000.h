@@ -173,5 +173,6 @@ typedef struct
 void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint32_t baseport, uint8_t irq, uint8_t* macaddr);
 void ne2000_rx_frame(void* p, const void* buf, int io_len);
 void NE2000_tx_event(uint64_t interval, void* p);
+void NE2000_tx_timer(void* p);
 
 #endif
