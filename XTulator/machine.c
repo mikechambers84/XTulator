@@ -179,11 +179,13 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 		mouse_init(&machine->UART[0]);
 		timing_addTimer(mouse_rxpoll, NULL, baudrate / 9, TIMING_ENABLED);
 	}
+#ifdef ENABLE_TCP_MODEM
 	else if ((machine->hwflags & MACHINE_HW_UART0_TCPMODEM) && !(machine->hwflags & MACHINE_HW_SKIP_UART0)) {
 		uart_init(&machine->UART[0], &machine->i8259, 0x3F8, 4, (void*)tcpmodem_tx, &machine->tcpmodem[0], NULL, NULL);
 		tcpmodem_init(&machine->tcpmodem[0], &machine->UART[0], 23);
 		timing_addTimer(tcpmodem_rxpoll, &machine->tcpmodem[0], baudrate / 9, TIMING_ENABLED);
 	}
+#endif
 
 	if ((machine->hwflags & MACHINE_HW_UART1_NONE) && !(machine->hwflags & MACHINE_HW_SKIP_UART1)) {
 		uart_init(&machine->UART[1], &machine->i8259, 0x2F8, 3, NULL, NULL, NULL, NULL);
@@ -193,17 +195,21 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 		mouse_init(&machine->UART[1]);
 		timing_addTimer(mouse_rxpoll, NULL, baudrate / 9, TIMING_ENABLED);
 	}
+#ifdef ENABLE_TCP_MODEM
 	else if ((machine->hwflags & MACHINE_HW_UART1_TCPMODEM) && !(machine->hwflags & MACHINE_HW_SKIP_UART1)) {
 		uart_init(&machine->UART[1], &machine->i8259, 0x2F8, 3, (void*)tcpmodem_tx, &machine->tcpmodem[1], NULL, NULL);
 		tcpmodem_init(&machine->tcpmodem[1], &machine->UART[1], 23);
 		timing_addTimer(tcpmodem_rxpoll, &machine->tcpmodem[1], baudrate / 9, TIMING_ENABLED);
 	}
+#endif
 
 #ifdef USE_NE2000
-	ne2000_init(&machine->ne2000, &machine->i8259, 0x300, 2, (uint8_t*)&mac);
-	if (machine->pcap_if > -1) {
-		if (pcap_init(&machine->ne2000, machine->pcap_if)) {
-			return -1;
+	if (machine->hwflags & MACHINE_HW_NE2000) {
+		ne2000_init(&machine->ne2000, &machine->i8259, 0x300, 2, (uint8_t*)&mac);
+		if (machine->pcap_if > -1) {
+			if (pcap_init(&machine->ne2000, machine->pcap_if)) {
+				return -1;
+			}
 		}
 	}
 #endif

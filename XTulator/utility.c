@@ -38,13 +38,12 @@ int utility_loadFile(uint8_t* dst, size_t len, char* srcfile) {
 
 	file = fopen(srcfile, "rb");
 	if (file == NULL) {
-		//debug_log(DEBUG_ERROR, "[ERROR] utility_loadFile: Unable to open %s\r\n", srcfile);
 		free(dst);
 		return -1;
 	}
 	if (fread(dst, 1, len, file) < len) {
-		//debug_log(DEBUG_ERROR, "[ERROR] utility_loadFile: %s input was less than %lu bytes\r\n", srcfile, (uint32_t)len);
 		free(dst);
+		fclose(file);
 		return -1;
 	}
 	fclose(file);

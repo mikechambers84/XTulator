@@ -365,6 +365,7 @@ int args_parse(MACHINE_t* machine, int argc, char* argv[]) {
 				return -1;
 			}
 			machine->pcap_if = atoi(argv[i]);
+			machine->hwflags |= MACHINE_HW_NE2000;
 		}
 #endif
 		else {

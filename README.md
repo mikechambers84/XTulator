@@ -50,8 +50,11 @@ Checkmarks below mean that feature is implemented enough to boot and run things 
 - [x] Novell NE2000 ethernet (Adapted source from Bochs)
 - [ ] Implement Intel 8080 emulation in the NEC V20 mode (low priority)
 
+### Pre-compiled Win32 release
 
-### Compiling
+You can download a pre-compiled Win32 binary [by clicking here](https://gofile.io/d/8wrNHA). It's v0.20.7.12 pre-alpha. It also includes a sample hard disk image with some very old software for testing with, as well as the current ROM set. To use the NE2000 Ethernet emulation, you will need to install [Npcap](https://nmap.org/npcap/).
+
+### Compiling from source
 
 This project has been tested to compile in Visual Studio 2019, Debian 10 and MacOS, though I may occasionally break Linux/MacOS support as it's not my main platform and I don't always test it at this point. Don't be surprised if it crashes and burns. Interpret "committed to master" as "this worked on Windows" for the time being.
 

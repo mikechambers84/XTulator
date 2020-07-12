@@ -36,6 +36,7 @@
 #define MACHINE_HW_UART1_TCPMODEM		0x0000000000000080ULL
 #define MACHINE_HW_RTC					0x0000000000000100ULL
 #define MACHINE_HW_DISK_HLE				0x0000000000000200ULL
+#define MACHINE_HW_NE2000				0x0000000000000400ULL
 
 //the "skip" HW flags are set in args.c to make sure machine init functions don't override explicit settings from the command line
 #define MACHINE_HW_SKIP_OPL				0x8000000000000000ULL

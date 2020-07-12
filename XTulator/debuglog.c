@@ -28,7 +28,10 @@ uint8_t debug_level = DEBUG_INFO;
 void debug_log(uint8_t level, char* format, ...) {
 	va_list argptr;
 	va_start(argptr, format);
-	if (level > debug_level) return;
+	if (level > debug_level) {
+		va_end(argptr);
+		return;
+	}
 	vfprintf(stderr, format, argptr);
 	fflush(stderr);
 	va_end(argptr);
