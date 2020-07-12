@@ -33,11 +33,7 @@
 #include "modules/io/tcpmodem.h"
 #endif
 #ifdef USE_NE2000
-#ifdef _WIN32
 #include "modules/io/pcap-win32.h"
-#else
-#include "modules/io/pcap-other.h"
-#endif
 #endif
 #include "modules/input/mouse.h"
 #include "modules/disk/biosdisk.h"

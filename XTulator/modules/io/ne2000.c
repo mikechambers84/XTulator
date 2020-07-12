@@ -11,11 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdint.h>
-#ifdef _WIN32
 #include "pcap-win32.h"
-#else
-#include "pcap-other.h"
-#endif
 #include "../../chipset/i8259.h"
 #include "../../ports.h"
 #include "../../timing.h"
