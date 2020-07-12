@@ -17,6 +17,10 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*
+	Intel 8259 interrupt controller
+*/
+
 #include <stdint.h>
 #include <string.h>
 #include "../config.h"

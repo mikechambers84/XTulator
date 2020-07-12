@@ -2,7 +2,7 @@
 
 ### About
 
-XTulator is an x86 PC emulator that is designed to run software that was written for Intel processors up to the 80186. It's able to run MS-DOS, FreeDOS, Windows 3.0, and many games of the era. It supports graphics up to the EGA/VGA standard, and emulates the Sound Blaster 2.0 as well as Adlib/OPL2 (using Nuked OPL). It also emulates peripherals like the standard Microsoft-compatible serial mouse and a serial modem, which can simulate phone line connections via TCP.
+XTulator is an x86 PC emulator that is designed to run software that was written for Intel processors up to the 80186. It's able to run MS-DOS, FreeDOS, Windows 3.0, and many games of the era. It supports graphics up to the EGA/VGA standard, and emulates the Sound Blaster 2.0 as well as Adlib/OPL2 (using Nuked OPL). It also emulates peripherals like the standard Microsoft-compatible serial mouse and a serial modem, which can simulate phone line connections via TCP. An NE2000 Ethernet adapter is also emulated using pcap.
 
 This is actually a rewrite of an emulator I wrote many years ago. It was poorly implemented, even though it worked fairly well. It had many hacks and a poor architecture, but most old 80186 software could still run under it. I've just never quite been happy with it, so I am writing this new emulator to be more sanely coded, and more accurate. I'm aiming to create a much more modular architecture this time around and avoid the design flaws which turned the old code into a mess.
 
@@ -47,13 +47,13 @@ Checkmarks below mean that feature is implemented enough to boot and run things 
 - [x] Sound Blaster (SB 2.0 compatibility, but still need to add high speed DMA mode. Glitches with a couple of games I've tried, working on it...)
 - [x] RTC (Need to fix this under non-Win32 OSes)
 - [x] Emulate a Hayes-compatible a serial modem using TCP (somewhat working, only in Windows)
-- [ ] Novell NE1000/NE2000 ethernet (May just port this in from Bochs)
+- [x] Novell NE2000 ethernet (Adapted source from Bochs)
 - [ ] Implement Intel 8080 emulation in the NEC V20 mode (low priority)
 
 
 ### Compiling
 
-This project has been tested to compile in Visual Studio 2019, Debian 10 and MacOS, though I may occasionally break Linux/MacOS support as it's not my main platform and I don't always test it right now.
+This project has been tested to compile in Visual Studio 2019, Debian 10 and MacOS, though I may occasionally break Linux/MacOS support as it's not my main platform and I don't always test it at this point. Don't be surprised if it crashes and burns. Interpret "committed to master" as "this worked on Windows" for the time being.
 
 ##### Windows (Visual Studio 2019)
 
@@ -69,7 +69,7 @@ You will need the SDL2 dev library. On Debian/Ubuntu and related distributions, 
 
 After this, the following line should successfully compile the code.
 
-<pre><code>gcc -O3 -o XTulator XTulator/*.c XTulator/chipset/*.c XTulator/cpu/cpu.c XTulator/modules/audio/*.c XTulator/modules/disk/*.c XTulator/modules/input/*.c XTulator/modules/io/*.c XTulator/modules/video/*.c -lm `sdl2-config --cflags --libs`</code></pre>
+<pre><code>gcc -O3 -o XTulator XTulator/*.c XTulator/chipset/*.c XTulator/cpu/cpu.c XTulator/modules/audio/*.c XTulator/modules/disk/*.c XTulator/modules/input/*.c XTulator/modules/io/*.c XTulator/modules/video/*.c -lm -lpthread `pcap-config --cflags --libs` `sdl2-config --cflags --libs`</code></pre>
 
 
 ### Some screenshots

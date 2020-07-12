@@ -17,6 +17,10 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*
+	Intel 8237 DMA controller
+*/
+
 #include "../config.h"
 #include <stdint.h>
 #include <stdio.h>

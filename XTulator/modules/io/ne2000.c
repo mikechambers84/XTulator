@@ -18,22 +18,12 @@
 #include "../../debuglog.h"
 #include "ne2000.h"
 
-//#define pclog printf
-#ifdef DEBUG_NE2000
-#define pclog(...) debug_log(DEBUG_DETAIL, __VA_ARGS__)
-#else
-#define pclog(...) (nulldump, __VA_ARGS__)
-uint8_t nulldump[2048];
-#endif
-
-#define fatal printf
-
-#define BX_RESET_HARDWARE 0
-#define BX_RESET_SOFTWARE 1
+#define NE2K_RESET_HARDWARE 0
+#define NE2K_RESET_SOFTWARE 1
 
 //Never completely fill the ne2k ring so that we never
 // hit the unclear completely full buffer condition.
-#define BX_NE2K_NEVER_FULL_RING (1)
+#define NE2K_NEVER_FULL_RING (1)
 
 static void ne2000_setirq(NE2000_t* ne2000, uint8_t irq)
 {
@@ -42,13 +32,13 @@ static void ne2000_setirq(NE2000_t* ne2000, uint8_t irq)
 //
 // reset - restore state to power-up, cancelling all i/o
 //
-static void ne2000_reset(int type, void* p)
+static void ne2000_reset(NE2000_t* ne2000, int type)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
     int i;
 
-    pclog("ne2000 reset\n");
-
+#ifdef DEBUG_NE2000
+    debug_log(DEBUG_DETAIL, "[NE2000] ne2000 reset\n");
+#endif
 
     // Initialise the mac address area by doubling the physical address
     ne2000->macaddr[0] = ne2000->physaddr[0];
@@ -120,15 +110,15 @@ static void ne2000_reset(int type, void* p)
 // The first 16 bytes contains the MAC address at even locations,
 // and there is 16K of buffer memory starting at 16K
 //
-uint8_t ne2000_chipmem_read_b(uint32_t address, NE2000_t* ne2000)
+uint8_t ne2000_chipmem_read_b(NE2000_t* ne2000, uint32_t address)
 {
     // ROM'd MAC address
     if ((address >= 0) && (address <= 31)) {
         return ne2000->macaddr[address];
     }
 
-    if ((address >= BX_NE2K_MEMSTART) && (address < BX_NE2K_MEMEND)) {
-        return ne2000->mem[address - BX_NE2K_MEMSTART];
+    if ((address >= NE2K_MEMSTART) && (address < NE2K_MEMEND)) {
+        return ne2000->mem[address - NE2K_MEMSTART];
     }
     else {
         return (0xff);
@@ -136,33 +126,33 @@ uint8_t ne2000_chipmem_read_b(uint32_t address, NE2000_t* ne2000)
 }
 
 
-uint16_t ne2000_chipmem_read_w(uint32_t address, NE2000_t* ne2000)
+uint16_t ne2000_chipmem_read_w(NE2000_t* ne2000, uint32_t address)
 {
     // ROM'd MAC address
     if ((address >= 0) && (address <= 31)) {
         return le16_to_cpu(*(uint16_t*)(ne2000->macaddr + address));
     }
 
-    if ((address >= BX_NE2K_MEMSTART) && (address < BX_NE2K_MEMEND)) {
-        return le16_to_cpu(*(uint16_t*)(ne2000->mem + (address - BX_NE2K_MEMSTART)));
+    if ((address >= NE2K_MEMSTART) && (address < NE2K_MEMEND)) {
+        return le16_to_cpu(*(uint16_t*)(ne2000->mem + (address - NE2K_MEMSTART)));
     }
     else {
         return (0xffff);
     }
 }
 
-void ne2000_chipmem_write_b(uint32_t address, uint8_t value, NE2000_t* ne2000)
+void ne2000_chipmem_write_b(NE2000_t* ne2000, uint32_t address, uint8_t value)
 {
-    if ((address >= BX_NE2K_MEMSTART) && (address < BX_NE2K_MEMEND)) {
-        ne2000->mem[address - BX_NE2K_MEMSTART] = value & 0xff;
+    if ((address >= NE2K_MEMSTART) && (address < NE2K_MEMEND)) {
+        ne2000->mem[address - NE2K_MEMSTART] = value & 0xff;
     }
 }
 
 
-void ne2000_chipmem_write_w(uint32_t address, uint16_t value, NE2000_t* ne2000)
+void ne2000_chipmem_write_w(NE2000_t* ne2000, uint32_t address, uint16_t value)
 {
-    if ((address >= BX_NE2K_MEMSTART) && (address < BX_NE2K_MEMEND)) {
-        *(uint16_t*)(ne2000->mem + (address - BX_NE2K_MEMSTART)) = cpu_to_le16(value);
+    if ((address >= NE2K_MEMSTART) && (address < NE2K_MEMEND)) {
+        *(uint16_t*)(ne2000->mem + (address - NE2K_MEMSTART)) = cpu_to_le16(value);
     }
 }
 
@@ -176,9 +166,8 @@ void ne2000_chipmem_write_w(uint32_t address, uint16_t value, NE2000_t* ne2000)
 // after that, insw/outsw instructions can be used to move
 // the appropriate number of bytes to/from the device.
 //
-uint16_t ne2000_dma_read(int io_len, void* p)
+uint16_t ne2000_dma_read(NE2000_t* ne2000, int io_len)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
     //
     // The 8390 bumps the address and decreases the byte count
     // by the selected word size after every access, not by
@@ -204,31 +193,30 @@ uint16_t ne2000_dma_read(int io_len, void* p)
     return (0);
 }
 
-uint16_t ne2000_asic_read_w(uint32_t offset, void* p)
+uint16_t ne2000_asic_read_w(NE2000_t* ne2000, uint32_t offset)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
     int retval;
 
     if (ne2000->DCR.wdsize & 0x01) {
         /* 16 bit access */
-        retval = ne2000_chipmem_read_w(ne2000->remote_dma, ne2000);
-        ne2000_dma_read(2, ne2000);
+        retval = ne2000_chipmem_read_w(ne2000, ne2000->remote_dma);
+        ne2000_dma_read(ne2000, 2);
     }
     else {
         /* 8 bit access */
-        retval = ne2000_chipmem_read_b(ne2000->remote_dma, ne2000);
-        ne2000_dma_read(1, ne2000);
+        retval = ne2000_chipmem_read_b(ne2000, ne2000->remote_dma);
+        ne2000_dma_read(ne2000, 1);
     }
 
-    pclog("asic read val=0x%04x\n", retval);
+#ifdef DEBUG_NE2000
+    debug_log(DEBUG_DETAIL, "[NE2000] asic read val=0x%04x\n", retval);
+#endif
 
     return retval;
 }
 
-void ne2000_dma_write(int io_len, void* p)
+void ne2000_dma_write(NE2000_t* ne2000, int io_len)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
-
     // is this right ??? asic_read uses DCR.wordsize
     ne2000->remote_dma += io_len;
     if (ne2000->remote_dma == ne2000->page_stop << 8) {
@@ -236,7 +224,7 @@ void ne2000_dma_write(int io_len, void* p)
     }
 
     ne2000->remote_bytes -= io_len;
-    if (ne2000->remote_bytes > BX_NE2K_MEMSIZ)
+    if (ne2000->remote_bytes > NE2K_MEMSIZ)
         ne2000->remote_bytes = 0;
 
     // If all bytes have been written, signal remote-DMA complete
@@ -248,49 +236,48 @@ void ne2000_dma_write(int io_len, void* p)
     }
 }
 
-void ne2000_asic_write_w(uint32_t offset, uint16_t value, void* p)
+void ne2000_asic_write_w(NE2000_t* ne2000, uint32_t offset, uint16_t value)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
-
-    pclog("asic write val=0x%04x\n", value);
+#ifdef DEBUG_NE2000
+    debug_log(DEBUG_DETAIL, "[NE2000] asic write val=0x%04x\n", value);
+#endif
 
     if (ne2000->remote_bytes == 0)
         return;
     if (ne2000->DCR.wdsize & 0x01) { //todo: why do i need this hack??
         /* 16 bit access */
-        ne2000_chipmem_write_w(ne2000->remote_dma, value, ne2000);
-        ne2000_dma_write(2, ne2000);
+        ne2000_chipmem_write_w(ne2000, ne2000->remote_dma, value);
+        ne2000_dma_write(ne2000, 2);
     }
     else {
         /* 8 bit access */
-        ne2000_chipmem_write_b(ne2000->remote_dma, (uint8_t)value, ne2000);
-        ne2000_dma_write(1, ne2000);
+        ne2000_chipmem_write_b(ne2000, ne2000->remote_dma, (uint8_t)value);
+        ne2000_dma_write(ne2000, 1);
     }
 }
 
-uint8_t ne2000_asic_read_b(uint32_t offset, void* p)
+uint8_t ne2000_asic_read_b(NE2000_t* ne2000, uint32_t offset)
 {
     if (offset & 1)
-        return ne2000_asic_read_w(offset & ~1, p) >> 1;
-    return ne2000_asic_read_w(offset, p) & 0xff;
+        return ne2000_asic_read_w(ne2000, offset & ~1) >> 1;
+    return ne2000_asic_read_w(ne2000, offset) & 0xff;
 }
 
-void ne2000_asic_write_b(uint32_t offset, uint8_t value, void* p)
+void ne2000_asic_write_b(NE2000_t* ne2000, uint32_t offset, uint8_t value)
 {
     if (offset & 1)
-        ne2000_asic_write_w(offset & ~1, value << 8, p);
+        ne2000_asic_write_w(ne2000, offset & ~1, value << 8);
     else
-        ne2000_asic_write_w(offset, value, p);
+        ne2000_asic_write_w(ne2000, offset, value);
 }
 
-uint8_t ne2000_reset_read(uint32_t offset, void* p)
+uint8_t ne2000_reset_read(NE2000_t* ne2000, uint32_t offset)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
-    ne2000_reset(BX_RESET_SOFTWARE, ne2000);
+    ne2000_reset(ne2000, NE2K_RESET_SOFTWARE);
     return 0;
 }
 
-void ne2000_reset_write(uint32_t offset, uint16_t value, void* p)
+void ne2000_reset_write(NE2000_t* ne2000, uint32_t offset, uint8_t value)
 {
 }
 
@@ -299,12 +286,13 @@ void ne2000_reset_write(uint32_t offset, uint16_t value, void* p)
 // mainline when the CPU attempts a read in the i/o space registered
 // by this ne2000 instance
 //
-uint8_t ne2000_read(uint32_t address, void* p)
+uint8_t ne2000_read(NE2000_t* ne2000, uint32_t address)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
     int ret;
 
-    pclog("read addr %x\n", address);
+#ifdef DEBUG_NE2000
+    debug_log(DEBUG_DETAIL, "[NE2000] read addr %x\n", address);
+#endif
 
     address &= 0xf;
 
@@ -315,13 +303,16 @@ uint8_t ne2000_read(uint32_t address, void* p)
                 (ne2000->CR.tx_packet << 2) |
                 (ne2000->CR.start << 1) |
                 (ne2000->CR.stop));
-        pclog("read CR returns 0x%08x\n", ret);
+#ifdef DEBUG_NE2000
+        debug_log(DEBUG_DETAIL, "[NE2000] read CR returns 0x%08x\n", ret);
+#endif
     }
     else {
         switch (ne2000->CR.pgsel) {
         case 0x00:
-            pclog("page 0 read from port %04x\n", address);
-
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] page 0 read from port %04x\n", address);
+#endif
             switch (address) {
             case 0x1:  // CLDA0
                 return (ne2000->local_dma & 0xff);
@@ -351,7 +342,9 @@ uint8_t ne2000_read(uint32_t address, void* p)
 
             case 0x6:  // FIFO
               // reading FIFO is only valid in loopback mode
-                pclog("reading FIFO not supported yet\n");
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] reading FIFO not supported yet\n");
+#endif
                 return (ne2000->fifo);
                 break;
 
@@ -375,14 +368,16 @@ uint8_t ne2000_read(uint32_t address, void* p)
                 break;
 
             case 0xa:  // reserved
-                pclog("reserved read - page 0, 0xa\n");
-                //if (network_card_current == 2)  return ne2000->i8029id0; //todo
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] reserved read - page 0, 0xa\n");
+#endif
                 return (0xff);
                 break;
 
             case 0xb:  // reserved
-                pclog("reserved read - page 0, 0xb\n");
-                //if (network_card_current == 2)  return ne2000->i8029id1; //todo
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] reserved read - page 0, 0xb\n");
+#endif
                 return (0xff);
                 break;
 
@@ -414,8 +409,9 @@ uint8_t ne2000_read(uint32_t address, void* p)
             break;
 
         case 0x01:
-            pclog("page 1 read from port %04x\n", address);
-
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] page 1 read from port %04x\n", address);
+#endif
             switch (address) {
             case 0x1:  // PAR0-5
             case 0x2:
@@ -427,7 +423,9 @@ uint8_t ne2000_read(uint32_t address, void* p)
                 break;
 
             case 0x7:  // CURR
-                pclog("returning current page: %02x\n", (ne2000->curr_page));
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] returning current page: %02x\n", (ne2000->curr_page));
+#endif
                 return (ne2000->curr_page);
 
             case 0x8:  // MAR0-7
@@ -446,8 +444,9 @@ uint8_t ne2000_read(uint32_t address, void* p)
             break;
 
         case 0x02:
-            pclog("page 2 read from port %04x\n", address);
-
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] page 2 read from port %04x\n", address);
+#endif
             switch (address) {
             case 0x1:  // PSTART
                 return (ne2000->page_start);
@@ -481,7 +480,9 @@ uint8_t ne2000_read(uint32_t address, void* p)
             case 0x9:
             case 0xa:
             case 0xb:
-                pclog("reserved read - page 2, 0x%02x\n", address);
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] reserved read - page 2, 0x%02x\n", address);
+#endif
                 break;
 
             case 0xc:  // RCR
@@ -544,7 +545,10 @@ uint8_t ne2000_read(uint32_t address, void* p)
             break;
 
         default:
-            fatal("ne2000 unknown value of pgsel in read - %d\n", ne2000->CR.pgsel);
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "ne2000 unknown value of pgsel in read - %d\n", ne2000->CR.pgsel);
+#endif
+            break;
         }
     }
     return ret;
@@ -555,12 +559,11 @@ uint8_t ne2000_read(uint32_t address, void* p)
 // mainline when the CPU attempts a write in the i/o space registered
 // by this ne2000 instance
 //
-void ne2000_write(uint32_t address, uint8_t value, void* p)
+void ne2000_write(NE2000_t* ne2000, uint32_t address, uint8_t value)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
-
-    pclog("write address %x, val=%x\n", address, value);
-
+#ifdef DEBUG_NE2000
+    debug_log(DEBUG_DETAIL, "[NE2000] write address %x, val=%x\n", address, value);
+#endif
     address &= 0xf;
 
     //
@@ -570,11 +573,14 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
     //  command register
     //
     if (address == 0x00) {
-        pclog("wrote 0x%02x to CR\n", value);
-
+#ifdef DEBUG_NE2000
+        debug_log(DEBUG_DETAIL, "[NE2000] wrote 0x%02x to CR\n", value);
+#endif
         // Validate remote-DMA
         if ((value & 0x38) == 0x00) {
-            pclog("CR write - invalid rDMA value 0\n");
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] CR write - invalid rDMA value 0\n");
+#endif
             value |= 0x20; /* dma_cmd == 4 is a safe default */
         }
 
@@ -604,22 +610,22 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
             ne2000->remote_start = ne2000->remote_dma =
                 ne2000->bound_ptr * 256;
             ne2000->remote_bytes = *((uint16_t*)&
-                ne2000->mem[ne2000->bound_ptr * 256 + 2 - BX_NE2K_MEMSTART]);
-            pclog("Sending buffer #x%x length %d\n",
-                ne2000->remote_start,
-                ne2000->remote_bytes);
+                ne2000->mem[ne2000->bound_ptr * 256 + 2 - NE2K_MEMSTART]);
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] Sending buffer #x%x length %d\n", ne2000->remote_start, ne2000->remote_bytes);
+#endif
         }
 
         // Check for start-tx
         if ((value & 0x04) && ne2000->TCR.loop_cntl) {
             // loopback mode
             if (ne2000->TCR.loop_cntl != 1) {
-                pclog("Loop mode %d not supported.\n", ne2000->TCR.loop_cntl);
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] Loop mode %d not supported.\n", ne2000->TCR.loop_cntl);
+#endif
             }
             else {
-                ne2000_rx_frame(ne2000, &ne2000->mem[ne2000->tx_page_start * 256 -
-                    BX_NE2K_MEMSTART],
-                    ne2000->tx_bytes);
+                ne2000_rx_frame(ne2000, &ne2000->mem[ne2000->tx_page_start * 256 - NE2K_MEMSTART], ne2000->tx_bytes);
 
                 // do a TX interrupt
                 // Generate an interrupt if not masked and not one in progress
@@ -632,18 +638,20 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
         else if (value & 0x04) {
             double microsecs;
             // start-tx and no loopback
+#ifdef DEBUG_NE2000
             if (ne2000->CR.stop || !ne2000->CR.start)
-                pclog("CR write - tx start, dev in reset\n");
+                debug_log(DEBUG_DETAIL, "[NE2000] CR write - tx start, dev in reset\n");
 
             if (ne2000->tx_bytes == 0)
-                pclog("CR write - tx start, tx bytes == 0\n");
+                debug_log(DEBUG_DETAIL, "[NE2000] CR write - tx start, tx bytes == 0\n");
+#endif
 
             // Send the packet to the system driver
-            pcap_txPacket((u_char*)&ne2000->mem[ne2000->tx_page_start * 256 - BX_NE2K_MEMSTART], (int)ne2000->tx_bytes);
+            pcap_txPacket((u_char*)&ne2000->mem[ne2000->tx_page_start * 256 - NE2K_MEMSTART], (int)ne2000->tx_bytes);
 
             microsecs = (double)((64 + 96 + 4 * 8 + ne2000->tx_bytes * 8) / 10);
             microsecs *= ((double)timing_getFreq() / 1000000);
-            NE2000_tx_event((uint64_t)microsecs, ne2000);
+            NE2000_tx_event(ne2000, (uint64_t)microsecs);
             // Schedule a timer to trigger a tx-complete interrupt
             // The number of microseconds is the bit-time / 10.
             // The bit-time is the preamble+sfd (64 bits), the
@@ -667,8 +675,9 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
     else {
         switch (ne2000->CR.pgsel) {
         case 0x00:
-            pclog("page 0 write to port %04x\n", address);
-
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] page 0 write to port %04x\n", address);
+#endif
             // It appears to be a common practice to use outw on page0 regs...
 
             switch (address) {
@@ -677,7 +686,6 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
                 break;
 
             case 0x2:  // PSTOP
-                  // BX_INFO(("Writing to PSTOP: %02x", value));
                 ne2000->page_stop = value;
                 break;
 
@@ -758,9 +766,10 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
 
             case 0xc:  // RCR
               // Check if the reserved bits are set
+#ifdef DEBUG_NE2000
                 if (value & 0xc0)
-                    pclog("RCR write, reserved bits set\n");
-
+                    debug_log(DEBUG_DETAIL, "[NE2000] RCR write, reserved bits set\n");
+#endif
                 // Set all other bit-fields
                 ne2000->RCR.errors_ok = ((value & 0x01) == 0x01);
                 ne2000->RCR.runts_ok = ((value & 0x02) == 0x02);
@@ -770,19 +779,25 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
                 ne2000->RCR.monitor = ((value & 0x20) == 0x20);
 
                 // Monitor bit is a little suspicious...
+#ifdef DEBUG_NE2000
                 if (value & 0x20)
-                    pclog("RCR write, monitor bit set!\n");
+                    debug_log(DEBUG_DETAIL, "[NE2000] RCR write, monitor bit set!\n");
+#endif
                 break;
 
             case 0xd:  // TCR
               // Check reserved bits
+#ifdef DEBUG_NE2000
                 if (value & 0xe0)
-                    pclog("TCR write, reserved bits set\n");
+                    debug_log(DEBUG_DETAIL, "[NE2000] TCR write, reserved bits set\n");
+#endif
 
                 // Test loop mode (not supported)
                 if (value & 0x06) {
                     ne2000->TCR.loop_cntl = (value & 0x6) >> 1;
-                    pclog("TCR write, loop mode %d not supported\n", ne2000->TCR.loop_cntl);
+#ifdef DEBUG_NE2000
+                    debug_log(DEBUG_DETAIL, "[NE2000] TCR write, loop mode %d not supported\n", ne2000->TCR.loop_cntl);
+#endif
                 }
                 else {
                     ne2000->TCR.loop_cntl = 0;
@@ -791,30 +806,35 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
                 // Inhibit-CRC not supported.
                 if (value & 0x01)
                 {
-                    pclog("ne2000 TCR write, inhibit-CRC not supported\n");
+#ifdef DEBUG_NE2000
+                    debug_log(DEBUG_DETAIL, "[NE2000] ne2000 TCR write, inhibit-CRC not supported\n");
+#endif
                     return;
                 }
 
                 // Auto-transmit disable very suspicious
+#ifdef DEBUG_NE2000
                 if (value & 0x08) {
-                    pclog("ne2000 TCR write, auto transmit disable not supported\n");
+                    debug_log(DEBUG_DETAIL, "[NE2000] ne2000 TCR write, auto transmit disable not supported\n");
                 }
-
+#endif
                 // Allow collision-offset to be set, although not used
                 ne2000->TCR.coll_prio = ((value & 0x08) == 0x08);
                 break;
 
             case 0xe:  // DCR
               // the loopback mode is not suppported yet
+#ifdef DEBUG_NE2000
                 if (!(value & 0x08)) {
-                    pclog("DCR write, loopback mode selected\n");
+                    debug_log(DEBUG_DETAIL, "[NE2000] DCR write, loopback mode selected\n");
                 }
                 // It is questionable to set longaddr and auto_rx, since they
                 // aren't supported on the ne2000. Print a warning and continue
                 if (value & 0x04)
-                    pclog("DCR write - LAS set ???\n");
+                    debug_log(DEBUG_DETAIL, "[NE2000] DCR write - LAS set ???\n");
                 if (value & 0x10)
-                    pclog("DCR write - AR set ???\n");
+                    debug_log(DEBUG_DETAIL, "[NE2000] DCR write - AR set ???\n");
+#endif
 
                 // Set other values.
                 ne2000->DCR.wdsize = ((value & 0x01) == 0x01);
@@ -826,10 +846,11 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
                 break;
 
             case 0xf:  // IMR
+#ifdef DEBUG_NE2000
               // Check for reserved bit
                 if (value & 0x80)
-                    pclog("IMR write, reserved bit set\n");
-
+                    debug_log(DEBUG_DETAIL, "[NE2000] IMR write, reserved bit set\n");
+#endif
                 // Set other values
                 ne2000->IMR.rx_inte = ((value & 0x01) == 0x01);
                 ne2000->IMR.tx_inte = ((value & 0x02) == 0x02);
@@ -839,7 +860,9 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
                 ne2000->IMR.cofl_inte = ((value & 0x20) == 0x20);
                 ne2000->IMR.rdma_inte = ((value & 0x40) == 0x40);
                 if (ne2000->ISR.pkt_tx && ne2000->IMR.tx_inte) {
-                    pclog("tx irq retrigger\n");
+#ifdef DEBUG_NE2000
+                    debug_log(DEBUG_DETAIL, "[NE2000] tx irq retrigger\n");
+#endif
                     i8259_doirq(ne2000->i8259, ne2000->base_irq);
                 }
                 break;
@@ -847,7 +870,9 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
             break;
 
         case 0x01:
-            pclog("page 1 w offset %04x\n", address);
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] page 1 w offset %04x\n", address);
+#endif
             switch (address) {
             case 0x1:  // PAR0-5
             case 0x2:
@@ -876,9 +901,10 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
             break;
 
         case 0x02:
+#ifdef DEBUG_NE2000
             if (address != 0)
-                pclog("page 2 write ?\n");
-
+                debug_log(DEBUG_DETAIL, "[NE2000] page 2 write ?\n");
+#endif
             switch (address) {
             case 0x1:  // CLDA0
               // Clear out low byte and re-insert
@@ -899,7 +925,9 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
             case 0x4:
                 //fatal("page 2 write to reserved offset 4\n");
                 //OS/2 Warp can cause this to freak out.
-                pclog("ne2000 page 2 write to reserved offset 4\n");
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] ne2000 page 2 write to reserved offset 4\n");
+#endif
                 break;
 
             case 0x5:  // Local Next-packet pointer
@@ -926,7 +954,9 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
             case 0xd:
             case 0xe:
             case 0xf:
-                pclog("ne2000 page 2 write to reserved offset %0x\n", address);
+#ifdef DEBUG_NE2000
+                debug_log(DEBUG_DETAIL, "[NE2000] ne2000 page 2 write to reserved offset %0x\n", address);
+#endif
             default:
                 break;
             }
@@ -954,7 +984,9 @@ void ne2000_write(uint32_t address, uint8_t value, void* p)
             break;
 
         default:
-            pclog("ne2000 unknown value of pgsel in write - %d\n", ne2000->CR.pgsel);
+#ifdef DEBUG_NE2000
+            debug_log(DEBUG_DETAIL, "[NE2000] ne2000 unknown value of pgsel in write - %d\n", ne2000->CR.pgsel);
+#endif
             break;
         }
     }
@@ -993,10 +1025,8 @@ static int mcast_index(const void* dst)
  * rx ring has enough room, it is copied into it and
  * the receive process is updated
  */
-void ne2000_rx_frame(void* p, const void* buf, int io_len)
+void ne2000_rx_frame(NE2000_t* ne2000, const void* buf, int io_len)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
-
     int pages;
     int avail;
     int idx;
@@ -1029,16 +1059,20 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
     // to do partial receives. The emulation to handle this condition
     // seems particularly painful.
     if ((avail < pages)
-#if BX_NE2K_NEVER_FULL_RING
+#if NE2K_NEVER_FULL_RING
         || (avail == pages)
 #endif
         ) {
-        pclog("no space\n");
+#ifdef DEBUG_NE2000
+        debug_log(DEBUG_DETAIL, "[NE2000] no space\n");
+#endif
         return;
     }
 
     if ((io_len < 40/*60*/) && !ne2000->RCR.runts_ok) {
-        pclog("rejected small packet, length %d\n", io_len);
+#ifdef DEBUG_NE2000
+        debug_log(DEBUG_DETAIL, "[NE2000] rejected small packet, length %d\n", io_len);
+#endif
         return;
     }
     // some computers don't care...
@@ -1065,10 +1099,13 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
         }
     }
     else {
-        pclog("rx_frame promiscuous receive\n");
+#ifdef DEBUG_NE2000
+        debug_log(DEBUG_DETAIL, "[NE2000] rx_frame promiscuous receive\n");
+#endif
     }
 
-    pclog("rx_frame %d to %x:%x:%x:%x:%x:%x from %x:%x:%x:%x:%x:%x\n",
+#ifdef DEBUG_NE2000
+    debug_log(DEBUG_DETAIL, "[NE2000] rx_frame %d to %x:%x:%x:%x:%x:%x from %x:%x:%x:%x:%x:%x\n",
         io_len,
         pktbuf[0], pktbuf[1], pktbuf[2], pktbuf[3], pktbuf[4], pktbuf[5],
         pktbuf[6], pktbuf[7], pktbuf[8], pktbuf[9], pktbuf[10], pktbuf[11]);
@@ -1076,10 +1113,11 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
     {
         int i;
         for (i = 0; i < io_len; i++) {
-            pclog("%02X ", pktbuf[i]);
+            debug_log(DEBUG_DETAIL, "[NE2000] %02X ", pktbuf[i]);
         }
-        pclog("\n");
+        debug_log(DEBUG_DETAIL, "[NE2000] \n");
     }
+#endif
 
     nextpage = ne2000->curr_page + pages;
     if (nextpage >= ne2000->page_stop) {
@@ -1098,8 +1136,7 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
     pkthdr[3] = (io_len + 4) >> 8;        // length-hi
 
     // copy into buffer, update curpage, and signal interrupt if config'd
-    startptr = &ne2000->mem[ne2000->curr_page * 256 -
-        BX_NE2K_MEMSTART];
+    startptr = &ne2000->mem[ne2000->curr_page * 256 - NE2K_MEMSTART];
     if ((nextpage > ne2000->curr_page) ||
         ((ne2000->curr_page + pages) == ne2000->page_stop)) {
         memcpy(startptr, pkthdr, 4);
@@ -1111,8 +1148,7 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
             * 256;
         memcpy(startptr, pkthdr, 4);
         memcpy(startptr + 4, buf, endbytes - 4);
-        startptr = &ne2000->mem[ne2000->page_start * 256 -
-            BX_NE2K_MEMSTART];
+        startptr = &ne2000->mem[ne2000->page_start * 256 - NE2K_MEMSTART];
         memcpy(startptr, (void*)(pktbuf + endbytes - 4),
             io_len - endbytes + 8);
         ne2000->curr_page = nextpage;
@@ -1126,107 +1162,52 @@ void ne2000_rx_frame(void* p, const void* buf, int io_len)
     ne2000->ISR.pkt_rx = 1;
 
     if (ne2000->IMR.rx_inte) {
-        pclog("packet rx interrupt\n");
+#ifdef DEBUG_NE2000
+        debug_log(DEBUG_DETAIL, "[NE2000] packet rx interrupt\n");
+#endif
         i8259_doirq(ne2000->i8259, ne2000->base_irq);
     }
 
 }
 
-void NE2000_tx_timer(void* p)
+void NE2000_tx_timer(NE2000_t* ne2000)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
-
     timing_timerDisable(ne2000->tx_timer);
 
-    pclog("tx_timer\n");
+#ifdef DEBUG_NE2000
+    debug_log(DEBUG_DETAIL, "[NE2000] tx_timer\n");
+#endif
     ne2000->TSR.tx_ok = 1;
     // Generate an interrupt if not masked and not one in progress
     if (ne2000->IMR.tx_inte && !ne2000->ISR.pkt_tx) {
-        pclog("tx complete interrupt\n");
+#ifdef DEBUG_NE2000
+        debug_log(DEBUG_DETAIL, "[NE2000] tx complete interrupt\n");
+#endif
         i8259_doirq(ne2000->i8259, ne2000->base_irq);
     }
     ne2000->ISR.pkt_tx = 1;
     ne2000->tx_timer_active = 0;
 }
 
-void NE2000_tx_event(uint64_t interval, void* p)
+void NE2000_tx_event(NE2000_t* ne2000, uint64_t interval)
 {
-    NE2000_t* ne2000 = (NE2000_t*)p;
     timing_updateInterval(ne2000->tx_timer, interval);
-    timing_timerEnable(ne2000->tx_timer); //TODO: timing
-}
-
-
-//BELOW IS ALL CODE TO INTERFACE WITH XTulator
-
-uint8_t ne2000_portReadB(NE2000_t* ne2000, uint32_t addr) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port read byte at %03X\r\n", addr);
-#endif
-    return ne2000_read(addr, ne2000);
-}
-
-void ne2000_portWriteB(NE2000_t* ne2000, uint32_t addr, uint8_t value) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port write byte at %03X: %02X\r\n", addr, value);
-#endif
-    ne2000_write(addr, (uint16_t)value, ne2000);
-}
-
-uint8_t ne2000_portAsicReadB(NE2000_t* ne2000, uint32_t addr) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port ASIC read byte at %03X\r\n", addr);
-#endif
-    return ne2000_asic_read_b(addr, ne2000);
-}
-
-void ne2000_portAsicWriteB(NE2000_t* ne2000, uint32_t addr, uint8_t value) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port ASIC write byte at %03X: %02X\r\n", addr, value);
-#endif
-    ne2000_asic_write_b(addr, value, ne2000);
-}
-
-uint16_t ne2000_portAsicReadW(NE2000_t* ne2000, uint32_t addr) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port ASIC read word at %03X\r\n", addr);
-#endif
-    return ne2000_asic_read_w(addr, ne2000);
-}
-
-void ne2000_portAsicWriteW(NE2000_t* ne2000, uint32_t addr, uint16_t value) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port ASIC write word at %03X: %04X\r\n", addr, value);
-#endif
-    ne2000_asic_write_w(addr, value, ne2000);
-}
-
-uint8_t ne2000_portResetRead(NE2000_t* ne2000, uint32_t addr) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port reset read at %03X\r\n", addr);
-#endif
-    return ne2000_reset_read(addr, ne2000);
-}
-
-void ne2000_portResetWrite(NE2000_t* ne2000, uint32_t addr, uint8_t value) {
-#ifdef DEBUG_NE2000
-    debug_log(DEBUG_DETAIL, "[NE2000] Port reset write at %03X: %02X\r\n", addr, value);
-#endif
-    ne2000_reset_write(addr, (uint16_t)value, ne2000);
+    timing_timerEnable(ne2000->tx_timer);
 }
 
 void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint32_t baseport, uint8_t irq, uint8_t* macaddr) {
+#ifdef DEBUG_NE2000
     debug_log(DEBUG_INFO, "[NE2000] Initializing NE2000 Ethernet adapter at 0x%03X, IRQ %u\r\n", baseport, irq);
-
+#endif
     ne2000->i8259 = i8259;
 
-    ports_cbRegister(baseport, 0x10, ne2000_portReadB, NULL, ne2000_portWriteB, NULL, ne2000);
-    ports_cbRegister(baseport + 0x10, 0x10, ne2000_portAsicReadB, ne2000_portAsicReadW, ne2000_portAsicWriteB, ne2000_portAsicWriteW, ne2000);
-    ports_cbRegister(baseport + 0x1F, 0x01, ne2000_portResetRead, NULL, ne2000_portResetWrite, NULL, ne2000);
+    ports_cbRegister(baseport, 0x10, ne2000_read, NULL, ne2000_write, NULL, ne2000);
+    ports_cbRegister(baseport + 0x10, 0x10, ne2000_asic_read_b, ne2000_asic_read_w, ne2000_asic_write_b, ne2000_asic_write_w, ne2000);
+    ports_cbRegister(baseport + 0x1F, 0x01, ne2000_reset_read, NULL, ne2000_reset_write, NULL, ne2000);
 
     ne2000_setirq(ne2000, irq);
     memcpy(ne2000->physaddr, macaddr, 6);
-    ne2000_reset(BX_RESET_HARDWARE, ne2000);
+    ne2000_reset(ne2000, NE2K_RESET_HARDWARE);
     
     ne2000->tx_timer = timing_addTimer(NE2000_tx_timer, ne2000, 1000, TIMING_DISABLED);
 }

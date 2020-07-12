@@ -106,37 +106,15 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 }
 
 void pcap_dispatchThread() {
-	pcap_loop(pcap_adhandle, -1, pcap_rx_handler, NULL);
 	while (running) {
-		utility_sleep(10);
+		pcap_dispatch(pcap_adhandle, 1, pcap_rx_handler, NULL);
 	}
-	pcap_breakloop(pcap_adhandle);
 }
 
 void pcap_rx_handler(u_char* param, const struct pcap_pkthdr* header, const u_char* pkt_data) {
-	int i, accept;
-	(VOID)(param); //unused variable
+	(void)(param); //unused variable
 
 	while (pcap_havePacket) {}
-
-	//below filters remove the burden of filtering out unwanted packets from the emulated NE2000 driver
-	accept = 1;
-	for (i = 0; i < 6; i++) {
-		if (pkt_data[i] != 0xFF) {
-			accept = 0;
-			break;
-		}
-	}
-
-	if (accept == 0) {
-		accept = 1;
-		for (i = 0; i < 6; i++) {
-			if (pkt_data[i] != pcap_ne2000->macaddr[i]) {
-				accept = 0;
-				break;
-			}
-		}
-	}
 
 	pcap_len = header->caplen;
 	if (pcap_len > 2048) return;

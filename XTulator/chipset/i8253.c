@@ -17,6 +17,10 @@
   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+/*
+	Intel 8253 timer
+*/
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include "../../chipset/i8259.h"
 
-#define  BX_NE2K_MEMSIZ    (32*1024)
-#define  BX_NE2K_MEMSTART  (16*1024)
-#define  BX_NE2K_MEMEND    (BX_NE2K_MEMSTART + BX_NE2K_MEMSIZ)
+#define  NE2K_MEMSIZ    (32*1024)
+#define  NE2K_MEMSTART  (16*1024)
+#define  NE2K_MEMEND    (NE2K_MEMSTART + NE2K_MEMSIZ)
 
 typedef struct
 {
@@ -155,7 +155,7 @@ typedef struct
 
     // Novell ASIC state
     uint8_t  macaddr[32];          // ASIC ROM'd MAC address, even bytes
-    uint8_t  mem[BX_NE2K_MEMSIZ];  // on-chip packet memory
+    uint8_t  mem[NE2K_MEMSIZ];  // on-chip packet memory
 
       // ne2k internal state
     uint32_t base_address;
@@ -169,10 +169,9 @@ typedef struct
 
 } NE2000_t;
 
-//BELOW ARE PROTOTYPES FOR XTulator
 void ne2000_init(NE2000_t* ne2000, I8259_t* i8259, uint32_t baseport, uint8_t irq, uint8_t* macaddr);
-void ne2000_rx_frame(void* p, const void* buf, int io_len);
-void NE2000_tx_event(uint64_t interval, void* p);
-void NE2000_tx_timer(void* p);
+void ne2000_rx_frame(NE2000_t* ne2000, const void* buf, int io_len);
+void NE2000_tx_event(NE2000_t* ne2000, uint64_t interval);
+void NE2000_tx_timer(NE2000_t* ne2000);
 
 #endif

@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define STR_TITLE "XTulator"
-#define STR_VERSION "0.20.7.7"
+#define STR_VERSION "0.20.7.12"
 
 //#define DEBUG_DMA
 //#define DEBUG_VGA
