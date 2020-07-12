@@ -57,15 +57,15 @@ This project has been tested to compile in Visual Studio 2019, Debian 10 and Mac
 
 ##### Windows (Visual Studio 2019)
 
-The repository includes a Visual Studio 2019 solution and project. You will need to install the [SDL2](http://www.libsdl.org) dev library.
+The repository includes a Visual Studio 2019 solution and project. You will need to install the [SDL2](http://www.libsdl.org) and [Npcap](https://nmap.org/npcap/) dev libraries.
 
 ##### Linux
 
 Sorry, there's no configure script or makefile yet, so you'l have to compile and link it by hand.
 
-You will need the SDL2 dev library. On Debian/Ubuntu and related distributions, you can install it with the following line.
+You will need the SDL2 and pcap dev libraries. On Debian/Ubuntu and related distributions, you can install it with the following line.
 
-<pre><code>sudo apt-get install libsdl2-dev</code></pre>
+<pre><code>sudo apt-get install libsdl2-dev libpcap-dev</code></pre>
 
 After this, the following line should successfully compile the code.
 
