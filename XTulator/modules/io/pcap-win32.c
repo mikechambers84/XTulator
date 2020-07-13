@@ -24,7 +24,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#ifdef _WIN32
 #include <process.h>
+#else
+#include <pthread.h>
+pthread_t pcap_dispatchThreadID;
+#endif
 #include <pcap.h>
 #include "../../config.h"
 #include "../../debuglog.h"
@@ -110,7 +115,11 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 
 	pcap_ne2000 = ne2000;
 
+#ifdef _WIN32
 	_beginthread((void*)pcap_dispatchThread, 0, NULL);
+#else
+	pthread_create(&pcap_dispatchThreadID, NULL, pcap_dispatchThread, NULL);
+#endif
 
 	return 0;
 }
