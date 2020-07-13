@@ -26,7 +26,9 @@
 
 #define USE_DISK_HLE
 #define USE_NUKED_OPL
+#ifdef _WIN32
 #define USE_NE2000
+#endif
 
 #ifdef _WIN32
 #define ENABLE_TCP_MODEM
@@ -44,6 +46,10 @@
 #define FUNC_INLINE __forceinline
 #else
 #define FUNC_INLINE __attribute__((always_inline))
+#endif
+
+#ifndef _WIN32
+#define _stricmp strcasecmp
 #endif
 
 extern volatile uint8_t running;
