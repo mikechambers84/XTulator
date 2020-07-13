@@ -1,12 +1,9 @@
 #ifndef _MENUS_H_
 #define MENUS_H_
 
-#include <stdint.h>
 #ifdef _WIN32
+#include <stdint.h>
 #include <Windows.h>
-#else
-//TODO: Linux and Mac stuff
-#endif
 #include "machine.h"
 
 #define MENUS_FUNCTION		0
@@ -39,4 +36,6 @@ void menus_ejectFloppy0();
 void menus_ejectFloppy1();
 void menus_reset();
 
-#endif
+#endif //_WIN32
+
+#endif //_MENUS_H_

@@ -42,11 +42,7 @@
 #include "modules/input/input.h"
 #ifdef USE_NE2000
 #include "modules/io/ne2000.h"
-#ifdef _WIN32
 #include "modules/io/pcap-win32.h"
-#else
-#include "modules/io/pcap-other.h"
-#endif
 #endif
 #include "modules/io/tcpmodem.h"
 #include "modules/video/cga.h"
