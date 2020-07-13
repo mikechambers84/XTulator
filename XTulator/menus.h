@@ -7,7 +7,7 @@
 #else
 //TODO: Linux and Mac stuff
 #endif
-#include "cpu/cpu.h"
+#include "machine.h"
 
 #define MENUS_FUNCTION		0
 #define MENUS_SUBMENU		1
@@ -30,12 +30,13 @@ typedef struct {
 } MENUBAR_t;
 
 int menus_init(HWND hwnd);
-void menus_setCPU(CPU_t* cpu);
+void menus_setMachine(MACHINE_t* machine);
 void menus_exit();
 void menus_openFloppyFile(uint8_t disk);
 void menus_changeFloppy0();
 void menus_changeFloppy1();
 void menus_ejectFloppy0();
 void menus_ejectFloppy1();
+void menus_reset();
 
 #endif

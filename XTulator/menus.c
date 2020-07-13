@@ -22,17 +22,19 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include "machine.h"
 #include <Windows.h>
-WNDPROC menus_oldProc;
 #include <SDL/SDL.h>
 #include "config.h"
 #include "modules/disk/biosdisk.h"
-#include "cpu/cpu.h"
+#include "utility.h"
 #include "menus.h"
 
+WNDPROC menus_oldProc;
+MACHINE_t* menus_useMachine = NULL;
 
 MENU_t menu_file[] = {
-	{ TEXT("&Reset system"), MENUS_ENABLED, MENUS_FUNCTION, NULL },
+	{ TEXT("Soft &reset (Ctrl-Alt-Del)"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_reset },
 	{ TEXT(""), MENUS_ENABLED, MENUS_SEPARATOR, NULL },
 	{ TEXT("E&xit"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_exit },
 	{ NULL }
@@ -47,7 +49,6 @@ MENU_t menu_disk[] = {
 	{ NULL }
 };
 
-CPU_t* menus_useCPU = NULL;
 
 LRESULT CALLBACK menus_wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	void (*func)();
@@ -104,8 +105,8 @@ int menus_init(HWND hwnd) {
 	return 0;
 }
 
-void menus_setCPU(CPU_t* cpu) {
-	menus_useCPU = cpu;
+void menus_setMachine(MACHINE_t* machine) {
+	menus_useMachine = machine;
 }
 
 //Below is all code for each menu item
@@ -135,7 +136,7 @@ void menus_openFloppyFile(uint8_t disk) {
 			return;
 		}
 		wcstombs(filembs, of_dlg.lpstrFile, size + 1);
-		biosdisk_insert(menus_useCPU, disk, filembs);
+		biosdisk_insert(&menus_useMachine->CPU, disk, filembs);
 		free(filembs);
 	}
 }
@@ -149,11 +150,27 @@ void menus_changeFloppy1() {
 }
 
 void menus_ejectFloppy0() {
-	biosdisk_eject(menus_useCPU, 0);
+	biosdisk_eject(&menus_useMachine->CPU, 0);
 }
 
 void menus_ejectFloppy1() {
-	biosdisk_eject(menus_useCPU, 1);
+	biosdisk_eject(&menus_useMachine->CPU, 1);
+}
+
+void menus_reset() {
+	menus_useMachine->KeyState.scancode = 0x1D; //ctrl
+	menus_useMachine->KeyState.isNew = 1;
+	i8259_doirq(&menus_useMachine->i8259, 1);
+	utility_sleep(50);
+
+	menus_useMachine->KeyState.scancode = 0x38; //alt
+	menus_useMachine->KeyState.isNew = 1;
+	i8259_doirq(&menus_useMachine->i8259, 1);
+	utility_sleep(50);
+
+	menus_useMachine->KeyState.scancode = 0x53; //delete
+	menus_useMachine->KeyState.isNew = 1;
+	i8259_doirq(&menus_useMachine->i8259, 1);
 }
 
 #endif

@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 	ports_init();
 	timing_init();
 	memory_init();
-	menus_setCPU(&machine.CPU);
+	menus_setMachine(&machine);
 
 	machine.pcap_if = -1;
 	if (args_parse(&machine, argc, argv)) {
@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
 		if (biosdisk[2].inserted) {
 			bootdrive = 0x80;
 		}
-		else if (biosdisk[0].inserted) {
+		else {
 			bootdrive = 0x00;
 		}
 	}

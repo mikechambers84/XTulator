@@ -127,6 +127,12 @@ void biosdisk_int19h(CPU_t* cpu, uint8_t intnum) {
 	if (intnum != 0x19) return;
 	
 	cpu_write(cpu, 0x475, biosdisk_hdcount);
+
+	//put "STI" and then "JMP -1" code at bootloader location in case nothing gets read from disk
+	cpu_write(cpu, 0x07C00, 0xFB);
+	cpu_write(cpu, 0x07C01, 0xEB);
+	cpu_write(cpu, 0x07C02, 0xFE);
+
 	cpu->regs.byteregs[regdl] = bootdrive;
 	biosdisk_read(cpu, (cpu->regs.byteregs[regdl] & 0x80) ? cpu->regs.byteregs[regdl] - 126 : cpu->regs.byteregs[regdl], 0x0000, 0x7C00, 0, 1, 0, 1);
 	cpu->segregs[regcs] = 0x0000;

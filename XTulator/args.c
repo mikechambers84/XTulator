@@ -140,10 +140,12 @@ void args_showHelp() {
 int args_parse(MACHINE_t* machine, int argc, char* argv[]) {
 	int i;
 
+#ifndef _WIN32
 	if (argc < 2) {
 		printf("Specify command line parameters. Use -h for help.\r\n");
 		return -1;
 	}
+#endif
 
 	for (i = 1; i < argc; i++) {
 		if (args_isMatch(argv[i], "-h")) {
