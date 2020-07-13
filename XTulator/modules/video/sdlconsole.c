@@ -21,6 +21,8 @@
 
 #ifdef _WIN32
 #include <SDL/SDL.h>
+#include <SDL/SDL_syswm.h>
+#include <Windows.h>
 #else
 #include <SDL.h>
 #endif
@@ -30,6 +32,7 @@
 #include "../input/sdlkeys.h"
 #include "../input/mouse.h"
 #include "../../timing.h"
+#include "../../menus.h"
 
 SDL_Window *sdlconsole_window = NULL;
 SDL_Renderer *sdlconsole_renderer = NULL;
@@ -48,6 +51,11 @@ void sdlconsole_keyRepeat(void* dummy) {
 }
 
 int sdlconsole_init(char *title) {
+#ifdef _WIN32
+	HWND hwnd;
+	SDL_SysWMinfo wmInfo;
+#endif
+
 	if (SDL_Init(SDL_INIT_VIDEO)) return -1;
 
 	sdlconsole_title = title;
@@ -63,6 +71,13 @@ int sdlconsole_init(char *title) {
 	}
 
 	sdlconsole_keyTimer = timing_addTimer(sdlconsole_keyRepeat, NULL, 2, TIMING_DISABLED);
+
+#ifdef _WIN32
+	SDL_VERSION(&wmInfo.version);
+	SDL_GetWindowWMInfo(sdlconsole_window, &wmInfo);
+	hwnd = wmInfo.info.win.window;
+	menus_init(hwnd);
+#endif
 
 	return 0;
 }

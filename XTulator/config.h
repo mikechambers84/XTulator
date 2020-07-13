@@ -39,8 +39,6 @@
 
 #define SAMPLE_RATE		48000
 #define SAMPLE_BUFFER	4800
-//4800
-//There are two alternating sample buffers, each of this size
 
 #ifdef _WIN32
 #define FUNC_INLINE __forceinline

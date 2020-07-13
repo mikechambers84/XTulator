@@ -20,12 +20,20 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <pthread.h>
+pthread_t emulationThreadID;
+#endif
 #include "config.h"
 #include "args.h"
 #include "timing.h"
 #include "memory.h"
 #include "ports.h"
 #include "machine.h"
+#include "menus.h"
+#include "utility.h"
 #include "debuglog.h"
 #include "cpu/cpu.h"
 #include "chipset/i8259.h"
@@ -66,6 +74,36 @@ void cputimer(void* dummy) {
 	goCPU = 1;
 }
 
+//NOTE: we start SDL in its own thread so that menu navigation doesn't block everything else
+void emulationThread(void* dummy) {
+	timing_addTimer(optimer, NULL, 10, TIMING_ENABLED);
+	if (speed > 0) {
+		instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
+		limitCPU = 1;
+		debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+		timing_addTimer(cputimer, NULL, 10000, TIMING_ENABLED);
+	}
+	while (running) {
+		static uint32_t curloop = 0;
+		if (limitCPU == 0) {
+			goCPU = 1;
+		}
+		if (goCPU) {
+			cpu_interruptCheck(&machine.CPU, &machine.i8259);
+			cpu_exec(&machine.CPU, instructionsperloop);
+			ops += instructionsperloop;
+			goCPU = 0;
+		}
+		timing_loop();
+		if (++curloop == 100) {
+#ifdef USE_NE2000
+			pcap_rxPacket();
+#endif
+			curloop = 0;
+		}
+	}
+}
+
 int main(int argc, char *argv[]) {
 
 	sprintf(title, "%s v%s pre alpha", STR_TITLE, STR_VERSION);
@@ -76,6 +114,7 @@ int main(int argc, char *argv[]) {
 	ports_init();
 	timing_init();
 	memory_init();
+	menus_setCPU(&machine.CPU);
 
 	machine.pcap_if = -1;
 	if (args_parse(&machine, argc, argv)) {
@@ -105,55 +144,40 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	timing_addTimer(optimer, NULL, 10, TIMING_ENABLED);
-	if (speed > 0) {
-		instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-		limitCPU = 1;
-		debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-		timing_addTimer(cputimer, NULL, 10000, TIMING_ENABLED);
-	}
-	while (running) {
-		static uint32_t curloop = 0;
-		if (limitCPU == 0) {
-			goCPU = 1;
-		}
-		if (goCPU) {
-			cpu_interruptCheck(&machine.CPU, &machine.i8259);
-			cpu_exec(&machine.CPU, instructionsperloop);
-			ops += instructionsperloop;
-			goCPU = 0;
-		}
-		timing_loop();
-		if (++curloop == 100) {
-			switch (sdlconsole_loop()) {
-			case SDLCONSOLE_EVENT_KEY:
-				machine.KeyState.scancode = sdlconsole_getScancode();
-				machine.KeyState.isNew = 1;
-				i8259_doirq(&machine.i8259, 1);
-				break;
-			case SDLCONSOLE_EVENT_QUIT:
-				running = 0;
-				break;
-			case SDLCONSOLE_EVENT_DEBUG_1:
-				if (speed > 0) {
-					speed *= 0.9;
-					instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-					debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-				}
-				break;
-			case SDLCONSOLE_EVENT_DEBUG_2:
-				if (speed > 0) {
-					speed *= 1.1;
-					instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-					debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-				}
-				break;
-			}
-
-#ifdef USE_NE2000
-			pcap_rxPacket();
+	//NOTE: We run the emulation logic in another thread to prevent menu navigation and window drags from blocking things...
+	//TODO: error checking below
+#ifdef _WIN32
+	_beginthread(emulationThread, 0, NULL);
+#else
+	pthread_create(&emulationThreadID, NULL, emulationThread, NULL);
 #endif
-			curloop = 0;
+
+	while (running) {
+		switch (sdlconsole_loop()) {
+		case SDLCONSOLE_EVENT_KEY:
+			machine.KeyState.scancode = sdlconsole_getScancode();
+			machine.KeyState.isNew = 1;
+			i8259_doirq(&machine.i8259, 1);
+			break;
+		case SDLCONSOLE_EVENT_QUIT:
+			running = 0;
+			break;
+		case SDLCONSOLE_EVENT_DEBUG_1:
+			if (speed > 0) {
+				speed *= 0.9;
+				instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
+				debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+			}
+			break;
+		case SDLCONSOLE_EVENT_DEBUG_2:
+			if (speed > 0) {
+				speed *= 1.1;
+				instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
+				debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+			}
+			break;
+		default:
+			utility_sleep(1);
 		}
 	}
 

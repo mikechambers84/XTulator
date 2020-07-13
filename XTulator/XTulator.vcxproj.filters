@@ -150,6 +150,9 @@
     <ClCompile Include="modules\io\pcap-win32.c">
       <Filter>Source Files\modules\io</Filter>
     </ClCompile>
+    <ClCompile Include="menus.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu\cpu.h">
@@ -250,6 +253,9 @@
     </ClInclude>
     <ClInclude Include="modules\io\pcap-win32.h">
       <Filter>Header Files\modules\io</Filter>
+    </ClInclude>
+    <ClInclude Include="menus.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
