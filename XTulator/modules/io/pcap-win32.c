@@ -18,7 +18,7 @@
 */
 
 /*
-	NPCAP interface for Win32
+	pcap interface for Win32
 */
 
 #include <stdio.h>
@@ -74,7 +74,7 @@ void pcap_listdevs() {
 
 	if (i == 0)
 	{
-		printf("\nNo interfaces found! Make sure Npcap is installed.\n");
+		printf("\nNo interfaces found! Make sure pcap is installed.\n");
 		return;
 	}
 
@@ -99,14 +99,14 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 
 	for (d = alldevs, i = 0; i < dev - 1; d = d->next, i++);
 
-	debug_log(DEBUG_INFO, "[PCAP-WIN32] Initializing Npcap library using device: \"%s\"\r\n", d->description);
+	debug_log(DEBUG_INFO, "[PCAP-WIN32] Initializing pcap library using device: \"%s\"\r\n", d->description ? d->description : "No description available");
 
 #ifdef _WIN32
 	if ((pcap_adhandle = pcap_open(d->name, 65536, PCAP_OPENFLAG_PROMISCUOUS, 1000, NULL, errbuf)) == NULL) {
 #else
 	if ((pcap_adhandle = pcap_open_live(d->name, 65535, 1, -1, NULL)) == NULL) {
 #endif
-		debug_log(DEBUG_ERROR, "\nUnable to open the adapter. %s is not supported by Npcap\n", d->name);
+		debug_log(DEBUG_ERROR, "\nUnable to open the adapter. %s is not supported by pcap\n", d->name);
 		pcap_freealldevs(alldevs);
 		return -1;
 	}
