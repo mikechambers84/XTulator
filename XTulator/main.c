@@ -54,7 +54,7 @@ uint8_t goCPU = 1, limitCPU = 0, showMIPS = 0;
 uint8_t videocard = 0xFF;
 double speed = 0;
 
-volatile uint8_t running = 1;
+volatile uint8_t running = 1, doKeyIRQ = 0;
 
 MACHINE_t machine;
 
@@ -91,6 +91,10 @@ void emulationThread(void* dummy) {
 			goCPU = 0;
 		}
 		timing_loop();
+		if (doKeyIRQ) {
+			doKeyIRQ = 0;
+			i8259_doirq(&machine.i8259, 1);
+		}
 		if (++curloop == 100) {
 #ifdef USE_NE2000
 			pcap_rxPacket();
@@ -155,7 +159,7 @@ int main(int argc, char *argv[]) {
 		case SDLCONSOLE_EVENT_KEY:
 			machine.KeyState.scancode = sdlconsole_getScancode();
 			machine.KeyState.isNew = 1;
-			i8259_doirq(&machine.i8259, 1);
+			doKeyIRQ = 1;
 			break;
 		case SDLCONSOLE_EVENT_QUIT:
 			running = 0;

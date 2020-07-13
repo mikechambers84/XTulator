@@ -104,7 +104,7 @@ int sdlaudio_init(MACHINE_t* machine) {
 	sdlaudio_rateFast = (double)(SAMPLE_RATE) * 1.01;
 
 	sdlaudio_timer = timing_addTimer(sdlaudio_generateSample, NULL, SAMPLE_RATE, TIMING_ENABLED);
-	
+
 	SDL_PauseAudio(1);
 	SDL_CondSignal(sdlaudio_canFill);
 	SDL_CondSignal(sdlaudio_canBuffer);
@@ -166,7 +166,9 @@ void sdlaudio_generateSample(void* dummy) {
 	val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker);
 	//val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
 	if (sdlaudio_useMachine->mixOPL) {
-		val += OPL3_getSample(&sdlaudio_useMachine->OPL3);
+		int16_t OPLsample;
+		OPL3_GenerateStream(&sdlaudio_useMachine->OPL3, &OPLsample, 1);
+		val += OPLsample;
 	}
 	if (sdlaudio_useMachine->mixBlaster) {
 		val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;

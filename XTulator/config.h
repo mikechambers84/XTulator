@@ -26,9 +26,7 @@
 
 #define USE_DISK_HLE
 #define USE_NUKED_OPL
-#ifdef _WIN32
 #define USE_NE2000
-#endif
 
 #ifdef _WIN32
 #define ENABLE_TCP_MODEM

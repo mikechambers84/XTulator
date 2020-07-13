@@ -21,8 +21,6 @@
 	NPCAP interface for Win32
 */
 
-#ifdef _WIN32
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -49,7 +47,11 @@ void pcap_listdevs() {
 	char errbuf[PCAP_ERRBUF_SIZE];
 
 	/* Retrieve the device list from the local machine */
+#ifdef _WIN32
 	if (pcap_findalldevs_ex(PCAP_SRC_IF_STRING, NULL /* auth is not needed */, &alldevs, errbuf) == -1)
+#else
+	if (pcap_findalldevs(&alldevs, errbuf) == -1)
+#endif
 	{
 		fprintf(stderr, "Error in pcap_findalldevs_ex: %s\n", errbuf);
 		exit(1);
@@ -81,7 +83,11 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 	int i = 0;
 	char errbuf[PCAP_ERRBUF_SIZE];
 
+#ifdef _WIN32
 	if (pcap_findalldevs_ex(PCAP_SRC_IF_STRING, NULL, &alldevs, errbuf) == -1) {
+#else
+	if (pcap_findalldevs(&alldevs, errbuf) == -1) {
+#endif
 		debug_log(DEBUG_ERROR, "Error in pcap_findalldevs: %s\n", errbuf);
 		return -1;
 	}
@@ -90,7 +96,11 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 
 	debug_log(DEBUG_INFO, "[PCAP-WIN32] Initializing Npcap library using device: \"%s\"\r\n", d->description);
 
+#ifdef _WIN32
 	if ((pcap_adhandle = pcap_open(d->name, 65536, PCAP_OPENFLAG_PROMISCUOUS, 1000, NULL, errbuf)) == NULL) {
+#else
+	if ((pcap_adhandle = pcap_open_live(d->name, 65535, 1, -1, NULL)) == NULL) {
+#endif
 		debug_log(DEBUG_ERROR, "\nUnable to open the adapter. %s is not supported by Npcap\n", d->name);
 		pcap_freealldevs(alldevs);
 		return -1;
@@ -108,6 +118,9 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 void pcap_dispatchThread() {
 	while (running) {
 		pcap_dispatch(pcap_adhandle, 1, pcap_rx_handler, NULL);
+		if (pcap_havePacket == 0) {
+			utility_sleep(1);
+		}
 	}
 }
 
@@ -133,5 +146,3 @@ void pcap_rxPacket() {
 void pcap_txPacket(u_char* data, int len) {
 	pcap_sendpacket(pcap_adhandle, data, len);
 }
-
-#endif

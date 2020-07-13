@@ -1,5 +1,3 @@
-#ifdef _WIN32
-
 #ifndef _PCAP_WIN32_H_
 #define _PCAP_WIN32_H_
 
@@ -15,7 +13,5 @@ void pcap_rxPacket();
 void pcap_txPacket(u_char* data, int len);
 
 extern volatile uint8_t pcap_havePacket;
-
-#endif
 
 #endif
