@@ -41,11 +41,7 @@ pthread_t emulationThreadID;
 #include "modules/video/sdlconsole.h"
 #include "modules/audio/sdlaudio.h"
 #ifdef USE_NE2000
-#ifdef _WIN32
 #include "modules/io/pcap-win32.h"
-#else
-#include "modules/io/pcap-other.h"
-#endif
 #endif
 
 char* usemachine = "generic_xt"; //default
