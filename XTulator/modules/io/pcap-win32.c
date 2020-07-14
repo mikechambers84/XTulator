@@ -21,6 +21,10 @@
 	pcap interface for Win32
 */
 
+#include "../../config.h"
+
+#ifdef USE_NE2000
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -31,7 +35,6 @@
 pthread_t pcap_dispatchThreadID;
 #endif
 #include <pcap.h>
-#include "../../config.h"
 #include "../../debuglog.h"
 #include "../../utility.h"
 #include "ne2000.h"
@@ -155,3 +158,5 @@ void pcap_rxPacket() {
 void pcap_txPacket(u_char* data, int len) {
 	pcap_sendpacket(pcap_adhandle, data, len);
 }
+
+#endif

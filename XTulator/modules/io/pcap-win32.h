@@ -1,6 +1,10 @@
 #ifndef _PCAP_WIN32_H_
 #define _PCAP_WIN32_H_
 
+#include "../../config.h"
+
+#ifdef USE_NE2000
+
 #include <stdint.h>
 #include <pcap.h>
 #include "ne2000.h"
@@ -14,4 +18,6 @@ void pcap_txPacket(u_char* data, int len);
 
 extern volatile uint8_t pcap_havePacket;
 
-#endif
+#endif //USE_NE2000
+
+#endif //_PCAP_WIN32_H_

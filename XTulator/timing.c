@@ -65,9 +65,9 @@ void timing_loop() {
 					(*timers[i].callback)(timers[i].data);
 				}
 				timers[i].previous += timers[i].interval;
-				/*if (timers[i].previous < timing_cur) {
+				if ((timing_cur - timers[i].previous) >= (timers[i].interval * 100)) {
 					timers[i].previous = timing_cur;
-				}*/
+				}
 			}
 		}
 	}

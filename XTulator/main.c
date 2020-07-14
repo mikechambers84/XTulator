@@ -54,7 +54,7 @@ uint8_t goCPU = 1, limitCPU = 0, showMIPS = 0;
 uint8_t videocard = 0xFF;
 double speed = 0;
 
-volatile uint8_t running = 1, doKeyIRQ = 0;
+volatile uint8_t running = 1;
 
 MACHINE_t machine;
 
@@ -72,36 +72,6 @@ void cputimer(void* dummy) {
 
 //NOTE: we start SDL in its own thread so that menu navigation doesn't block everything else
 void emulationThread(void* dummy) {
-	timing_addTimer(optimer, NULL, 10, TIMING_ENABLED);
-	if (speed > 0) {
-		instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-		limitCPU = 1;
-		debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-		timing_addTimer(cputimer, NULL, 10000, TIMING_ENABLED);
-	}
-	while (running) {
-		static uint32_t curloop = 0;
-		if (limitCPU == 0) {
-			goCPU = 1;
-		}
-		if (goCPU) {
-			cpu_interruptCheck(&machine.CPU, &machine.i8259);
-			cpu_exec(&machine.CPU, instructionsperloop);
-			ops += instructionsperloop;
-			goCPU = 0;
-		}
-		timing_loop();
-		if (doKeyIRQ) {
-			doKeyIRQ = 0;
-			i8259_doirq(&machine.i8259, 1);
-		}
-		if (++curloop == 100) {
-#ifdef USE_NE2000
-			pcap_rxPacket();
-#endif
-			curloop = 0;
-		}
-	}
 }
 
 int main(int argc, char *argv[]) {
@@ -154,32 +124,55 @@ int main(int argc, char *argv[]) {
 	pthread_create(&emulationThreadID, NULL, emulationThread, NULL);
 #endif
 
+	timing_addTimer(optimer, NULL, 10, TIMING_ENABLED);
+	if (speed > 0) {
+		instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
+		limitCPU = 1;
+		debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+		timing_addTimer(cputimer, NULL, 10000, TIMING_ENABLED);
+	}
 	while (running) {
-		switch (sdlconsole_loop()) {
-		case SDLCONSOLE_EVENT_KEY:
-			machine.KeyState.scancode = sdlconsole_getScancode();
-			machine.KeyState.isNew = 1;
-			doKeyIRQ = 1;
-			break;
-		case SDLCONSOLE_EVENT_QUIT:
-			running = 0;
-			break;
-		case SDLCONSOLE_EVENT_DEBUG_1:
-			if (speed > 0) {
-				speed *= 0.9;
-				instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-				debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+		static uint32_t curloop = 0;
+		if (limitCPU == 0) {
+			goCPU = 1;
+		}
+		if (goCPU) {
+			cpu_interruptCheck(&machine.CPU, &machine.i8259);
+			cpu_exec(&machine.CPU, instructionsperloop);
+			ops += instructionsperloop;
+			goCPU = 0;
+		}
+		timing_loop();
+		if (++curloop == 100) {
+			switch (sdlconsole_loop()) {
+			case SDLCONSOLE_EVENT_KEY:
+				machine.KeyState.scancode = sdlconsole_getScancode();
+				machine.KeyState.isNew = 1;
+				i8259_doirq(&machine.i8259, 1);
+				break;
+			case SDLCONSOLE_EVENT_QUIT:
+				running = 0;
+				break;
+			case SDLCONSOLE_EVENT_DEBUG_1:
+				if (speed > 0) {
+					speed *= 0.9;
+					instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
+					debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+				}
+				break;
+			case SDLCONSOLE_EVENT_DEBUG_2:
+				if (speed > 0) {
+					speed *= 1.1;
+					instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
+					debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+				}
+				break;
 			}
-			break;
-		case SDLCONSOLE_EVENT_DEBUG_2:
-			if (speed > 0) {
-				speed *= 1.1;
-				instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-				debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-			}
-			break;
-		default:
-			utility_sleep(1);
+
+#ifdef USE_NE2000
+			pcap_rxPacket();
+#endif
+			curloop = 0;
 		}
 	}
 
