@@ -68,7 +68,7 @@ uint8_t vga_cursor_blink_state = 0;
 volatile uint8_t vga_wmode, vga_rmode, vga_shiftmode, vga_rotate, vga_logicop, vga_enableplane, vga_readmap, vga_scandbl, vga_hdbl, vga_bpp, vga_latch[4];
 uint8_t* vga_RAM[4]; //4 planes
 
-volatile uint64_t vga_hblankstart, vga_hblankend, vga_hblanklen, vga_dispinterval, vga_hblankinterval;
+volatile uint64_t vga_hblankstart, vga_hblankend, vga_hblanklen, vga_dispinterval, vga_hblankinterval, vga_htotal;
 volatile uint64_t vga_vblankstart, vga_vblankend, vga_vblanklen, vga_vblankinterval, vga_frameinterval;
 volatile uint8_t vga_doRender = 0, vga_doBlit = 0;
 volatile double vga_targetFPS = 60, vga_lockFPS = 0;
@@ -138,8 +138,6 @@ void vga_updateScanlineTiming() {
 	else {
 		pixelclock = 25175000.0;
 	}
-	vga_targetFPS = pixelclock / ((double)vga_hblankend * (double)vga_vblankend);
-	pixelclock = (double)timing_getFreq() / pixelclock;
 
 	vga_hblankstart = (uint64_t)vga_crtcd[0x02] * (uint64_t)vga_dots;
 	vga_hblankend = ((uint64_t)vga_crtcd[0x02] * (uint64_t)vga_dots) + (((uint64_t)vga_crtcd[0x03] & 0x1F) + 1) * (uint64_t)vga_dots;
@@ -147,7 +145,11 @@ void vga_updateScanlineTiming() {
 	vga_vblankstart = (uint64_t)vga_crtcd[0x10] | ((uint64_t)(vga_crtcd[0x07] & 0x04) << 6) | ((uint64_t)(vga_crtcd[0x07] & 0x80) << 2);
 	vga_vblankend = (uint64_t)vga_crtcd[0x06] | ((uint64_t)(vga_crtcd[0x07] & 0x01) << 8) | ((uint64_t)(vga_crtcd[0x07] & 0x20) << 4);
 	vga_vblanklen = vga_vblankend - vga_vblankstart;
-	vga_dispinterval = (uint64_t)((double)vga_hblankstart * pixelclock);
+	vga_htotal = (uint64_t)vga_crtcd[0x00];
+	vga_targetFPS = pixelclock / ((double)(vga_htotal + 5) * (double)vga_dots * (double)vga_vblankend);
+
+	pixelclock = (double)timing_getFreq() / pixelclock; //get ratio of pixel clock vs our timer frequency for interval calculations
+	vga_dispinterval = (uint64_t)((double)(vga_htotal + 5) * (double)vga_dots * pixelclock);
 	vga_hblankinterval = (uint64_t)((double)vga_hblanklen * pixelclock);
 	vga_vblankinterval = (uint64_t)((double)vga_hblankend * (double)vga_vblanklen * pixelclock);
 	vga_frameinterval = (uint64_t)((double)vga_hblankend * (double)vga_vblankend * pixelclock);
