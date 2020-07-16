@@ -1413,7 +1413,7 @@ void OPL3_write(opl3_chip* chip, uint32_t portnum, uint8_t value) {
         if (port == 0x04) {
             chip->data4 = value;
         }
-        OPL3_WriteReg(chip, (Bit16u)port, value);
+        OPL3_WriteRegBuffered(chip, (Bit16u)port, value);
         break;
     }
 }

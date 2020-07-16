@@ -138,6 +138,7 @@ void sdlaudio_bufferSample(int16_t val) {
 	//SDL_CondSignal(sdlaudio_canFill);
 }
 
+//I need to make this use a ring buffer soon...
 void sdlaudio_moveBuffer(int16_t* dst, int len) {
 	int i;
 	memset(dst, 0, len);
@@ -163,12 +164,12 @@ void sdlaudio_moveBuffer(int16_t* dst, int len) {
 void sdlaudio_generateSample(void* dummy) {
 	int16_t val;
 
-	val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker);
+	val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker) / 3;
 	//val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
 	if (sdlaudio_useMachine->mixOPL) {
 		int16_t OPLsample;
 		OPL3_GenerateStream(&sdlaudio_useMachine->OPL3, &OPLsample, 1);
-		val += OPLsample;
+		val += OPLsample / 2;
 	}
 	if (sdlaudio_useMachine->mixBlaster) {
 		val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;

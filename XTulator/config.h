@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define STR_TITLE "XTulator"
-#define STR_VERSION "0.20.7.12"
+#define STR_VERSION "0.20.7.15"
 
 //#define DEBUG_DMA
 //#define DEBUG_VGA
@@ -52,8 +52,12 @@
 
 extern volatile uint8_t running;
 extern uint8_t videocard, showMIPS;
-extern double speed, speedarg;
+extern double speedarg;
+extern volatile double speed;
 extern uint32_t baudrate, ramsize;
 extern char* usemachine;
+extern uint8_t bootdrive;
+
+void setspeed(double mhz);
 
 #endif

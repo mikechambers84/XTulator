@@ -34,7 +34,18 @@ void menus_changeFloppy0();
 void menus_changeFloppy1();
 void menus_ejectFloppy0();
 void menus_ejectFloppy1();
+void menus_insertHard0();
+void menus_insertHard1();
+void menus_setBootFloppy0();
+void menus_setBootHard0();
 void menus_reset();
+void menus_speed477();
+void menus_speed8();
+void menus_speed10();
+void menus_speed16();
+void menus_speed25();
+void menus_speed50();
+void menus_speedunlimited();
 
 #endif //_WIN32
 

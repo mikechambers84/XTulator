@@ -27,11 +27,15 @@
 #include <SDL/SDL.h>
 #include "config.h"
 #include "modules/disk/biosdisk.h"
+#include "timing.h"
 #include "utility.h"
 #include "menus.h"
 
 WNDPROC menus_oldProc;
 MACHINE_t* menus_useMachine = NULL;
+uint32_t menus_resetTimer;
+const uint8_t menus_ctrlaltdel[3] = { 0x1D, 0x38, 0x53 };
+uint8_t menus_resetPos = 0;
 
 MENU_t menu_file[] = {
 	{ TEXT("Soft &reset (Ctrl-Alt-Del)"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_reset },
@@ -46,6 +50,23 @@ MENU_t menu_disk[] = {
 	{ TEXT(""), MENUS_ENABLED, MENUS_SEPARATOR, NULL },
 	{ TEXT("Eject floppy 0"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_ejectFloppy0 },
 	{ TEXT("Eject floppy 1"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_ejectFloppy1 },
+	{ TEXT(""), MENUS_ENABLED, MENUS_SEPARATOR, NULL },
+	{ TEXT("Insert hard disk 0... (forces immediate reboot)"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_insertHard0 },
+	{ TEXT("Insert hard disk 1... (forces immediate reboot)"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_insertHard1 },
+	{ TEXT(""), MENUS_ENABLED, MENUS_SEPARATOR, NULL },
+	{ TEXT("Set boot drive to fd0"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_setBootFloppy0 },
+	{ TEXT("Set boot drive to hd0"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_setBootHard0 },
+	{ NULL }
+};
+
+MENU_t menu_emulation[] = {
+	{ TEXT("Set CPU speed to 4.77 MHz"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_speed477 },
+	{ TEXT("Set CPU speed to 8 MHz"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_speed8 },
+	{ TEXT("Set CPU speed to 10 MHz"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_speed10 },
+	{ TEXT("Set CPU speed to 16 MHz"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_speed16 },
+	{ TEXT("Set CPU speed to 25 MHz"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_speed25 },
+	{ TEXT("Set CPU speed to 50 MHz"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_speed50 },
+	{ TEXT("Set CPU speed to unlimited"), MENUS_ENABLED, MENUS_FUNCTION, (void*)menus_speedunlimited },
 	{ NULL }
 };
 
@@ -85,12 +106,25 @@ int menus_buildMenu(HMENU* hmenuBar, wchar_t* title, MENU_t* menu) {
 	return 0;
 }
 
+void menus_resetCallback(void* dummy) {
+	menus_useMachine->KeyState.scancode = menus_ctrlaltdel[menus_resetPos++];
+	menus_useMachine->KeyState.isNew = 1;
+	i8259_doirq(&menus_useMachine->i8259, 1);
+
+	if (menus_resetPos == 3) {
+		timing_timerDisable(menus_resetTimer);
+	}
+}
+
 int menus_init(HWND hwnd) {
 	HMENU hmenuBar;
 
 	hmenuBar = CreateMenu();
 
 	if (menus_buildMenu(&hmenuBar, TEXT("File"), menu_file) < 0) {
+		return -1;
+	}
+	if (menus_buildMenu(&hmenuBar, TEXT("Emulation"), menu_emulation) < 0) {
 		return -1;
 	}
 	if (menus_buildMenu(&hmenuBar, TEXT("Disk"), menu_disk) < 0) {
@@ -101,6 +135,7 @@ int menus_init(HWND hwnd) {
 	DrawMenuBar(hwnd);
 
 	menus_oldProc = (WNDPROC)SetWindowLong(hwnd, GWL_WNDPROC, (LONG_PTR)menus_wndProc);
+	menus_resetTimer = timing_addTimer(menus_resetCallback, NULL, 10, TIMING_DISABLED);
 
 	return 0;
 }
@@ -141,6 +176,33 @@ void menus_openFloppyFile(uint8_t disk) {
 	}
 }
 
+void menus_openHardFile(uint8_t disk) {
+	OPENFILENAME of_dlg;
+	wchar_t filename[MAX_PATH + 1] = { 0 };
+
+	memset(&of_dlg, 0, sizeof(of_dlg));
+	of_dlg.lStructSize = sizeof(of_dlg);
+	of_dlg.lpstrTitle = TEXT("Open disk image");
+	of_dlg.hInstance = NULL;
+	of_dlg.lpstrFile = filename;
+	of_dlg.lpstrFilter = TEXT("Hard disk images (*.img)\0*.img\0All files (*.*)\0*.*\0\0");
+	of_dlg.nMaxFile = MAX_PATH;
+	of_dlg.Flags = OFN_FILEMUSTEXIST | OFN_LONGNAMES;
+	if (GetOpenFileName(&of_dlg)) {
+		size_t size;
+		char* filembs;
+		size = wcstombs(NULL, of_dlg.lpstrFile, 0);
+		filembs = (char*)malloc(size + 1);
+		if (filembs == NULL) {
+			return;
+		}
+		wcstombs(filembs, of_dlg.lpstrFile, size + 1);
+		biosdisk_insert(&menus_useMachine->CPU, disk, filembs);
+		free(filembs);
+		menus_reset();
+	}
+}
+
 void menus_changeFloppy0() {
 	menus_openFloppyFile(0);
 }
@@ -157,20 +219,53 @@ void menus_ejectFloppy1() {
 	biosdisk_eject(&menus_useMachine->CPU, 1);
 }
 
+void menus_insertHard0() {
+	menus_openHardFile(2);
+}
+
+void menus_insertHard1() {
+	menus_openHardFile(3);
+}
+
+void menus_setBootFloppy0() {
+	bootdrive = 0;
+}
+
+void menus_setBootHard0() {
+	bootdrive = 2;
+}
+
 void menus_reset() {
-	menus_useMachine->KeyState.scancode = 0x1D; //ctrl
-	menus_useMachine->KeyState.isNew = 1;
-	i8259_doirq(&menus_useMachine->i8259, 1);
-	utility_sleep(50);
+	menus_resetPos = 0;
+	timing_timerEnable(menus_resetTimer);
+}
 
-	menus_useMachine->KeyState.scancode = 0x38; //alt
-	menus_useMachine->KeyState.isNew = 1;
-	i8259_doirq(&menus_useMachine->i8259, 1);
-	utility_sleep(50);
+void menus_speed477() {
+	setspeed(4.77);
+}
 
-	menus_useMachine->KeyState.scancode = 0x53; //delete
-	menus_useMachine->KeyState.isNew = 1;
-	i8259_doirq(&menus_useMachine->i8259, 1);
+void menus_speed8() {
+	setspeed(8.0);
+}
+
+void menus_speed10() {
+	setspeed(10.0);
+}
+
+void menus_speed16() {
+	setspeed(16.0);
+}
+
+void menus_speed25() {
+	setspeed(25.0);
+}
+
+void menus_speed50() {
+	setspeed(50.0);
+}
+
+void menus_speedunlimited() {
+	setspeed(0);
 }
 
 #endif
