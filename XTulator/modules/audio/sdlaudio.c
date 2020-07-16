@@ -60,6 +60,8 @@ uint64_t sdlaudio_cbTime[10] = { //history of time between callbacks to dynamica
 double sdlaudio_genSampRate = SAMPLE_RATE;
 double sdlaudio_genInterval;
 
+volatile uint8_t sdlaudio_updateTiming = 0;
+
 MACHINE_t* sdlaudio_useMachine = NULL;
 
 void sdlaudio_moveBuffer(int16_t* dst, int len);
@@ -123,11 +125,10 @@ void sdlaudio_bufferSample(int16_t val) {
 	sdlaudio_buffer[sdlaudio_bufferpos++] = val;
 
 	if (sdlaudio_bufferpos < (int)((double)(SAMPLE_BUFFER) * 0.5)) {
-		timing_updateIntervalFreq(sdlaudio_timer, sdlaudio_rateFast);
+		sdlaudio_updateTiming = SDLAUDIO_TIMING_FAST;
 	}
 	else if (sdlaudio_bufferpos >= (int)((double)(SAMPLE_BUFFER) * 0.75)) {
-		timing_updateIntervalFreq(sdlaudio_timer, SAMPLE_RATE);
-		SDL_PauseAudio(0);
+		sdlaudio_updateTiming = SDLAUDIO_TIMING_NORMAL;
 	}
 
 	if (sdlaudio_bufferpos == SAMPLE_BUFFER) {
@@ -136,6 +137,17 @@ void sdlaudio_bufferSample(int16_t val) {
 
 	//SDL_UnlockMutex(sdlaudio_mutex);
 	//SDL_CondSignal(sdlaudio_canFill);
+}
+
+void sdlaudio_updateSampleTiming() {
+	if (sdlaudio_updateTiming == SDLAUDIO_TIMING_FAST) {
+		timing_updateIntervalFreq(sdlaudio_timer, sdlaudio_rateFast);
+	}
+	else if (sdlaudio_updateTiming == SDLAUDIO_TIMING_NORMAL) {
+		timing_updateIntervalFreq(sdlaudio_timer, SAMPLE_RATE);
+		SDL_PauseAudio(0);
+	}
+	sdlaudio_updateTiming = 0;
 }
 
 //I need to make this use a ring buffer soon...
@@ -167,9 +179,10 @@ void sdlaudio_generateSample(void* dummy) {
 	val = pcspeaker_getSample(&sdlaudio_useMachine->pcspeaker) / 3;
 	//val += opl2_generateSample(&sdlaudio_useMachine->OPL2) / 3;
 	if (sdlaudio_useMachine->mixOPL) {
-		int16_t OPLsample;
-		OPL3_GenerateStream(&sdlaudio_useMachine->OPL3, &OPLsample, 1);
-		val += OPLsample / 2;
+		int16_t OPLsample[2];
+		//val += sdlaudio_getOPLsample() / 2;
+		OPL3_GenerateStream(&sdlaudio_useMachine->OPL3, OPLsample, 1);
+		val += OPLsample[0] / 2;
 	}
 	if (sdlaudio_useMachine->mixBlaster) {
 		val += blaster_getSample(&sdlaudio_useMachine->blaster) / 3;

@@ -139,6 +139,7 @@ int main(int argc, char *argv[]) {
 			goCPU = 0;
 		}
 		timing_loop();
+		sdlaudio_updateSampleTiming();
 		if (++curloop == 100) {
 			switch (sdlconsole_loop()) {
 			case SDLCONSOLE_EVENT_KEY:
@@ -154,6 +155,7 @@ int main(int argc, char *argv[]) {
 			case SDLCONSOLE_EVENT_DEBUG_2:
 				break;
 			}
+
 
 #ifdef USE_NE2000
 			pcap_rxPacket();
