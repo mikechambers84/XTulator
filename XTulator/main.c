@@ -20,12 +20,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#ifdef _WIN32
-#include <process.h>
-#else
-#include <pthread.h>
-pthread_t emulationThreadID;
-#endif
 #include "config.h"
 #include "args.h"
 #include "timing.h"
@@ -49,10 +43,10 @@ char* usemachine = "generic_xt"; //default
 char title[64]; //assuming 64 isn't safe if somebody starts messing with STR_TITLE and STR_VERSION
 
 uint64_t ops = 0;
-uint32_t baudrate = 115200, ramsize = 640, instructionsperloop = 100;
-uint8_t goCPU = 1, limitCPU = 0, showMIPS = 0;
-uint8_t videocard = 0xFF;
-double speed = 0;
+uint32_t baudrate = 115200, ramsize = 640, instructionsperloop = 100, cpuLimitTimer;
+uint8_t videocard = 0xFF, showMIPS = 0;
+volatile uint8_t goCPU = 1, limitCPU = 0;
+volatile double speed = 0;
 
 volatile uint8_t running = 1;
 
@@ -70,8 +64,20 @@ void cputimer(void* dummy) {
 	goCPU = 1;
 }
 
-//NOTE: we start SDL in its own thread so that menu navigation doesn't block everything else
-void emulationThread(void* dummy) {
+void setspeed(double mhz) {
+	if (mhz > 0) {
+		speed = mhz;
+		instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
+		limitCPU = 1;
+		debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
+		timing_timerEnable(cpuLimitTimer);
+	}
+	else {
+		speed = 0;
+		instructionsperloop = 100;
+		limitCPU = 0;
+		timing_timerDisable(cpuLimitTimer);
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -116,20 +122,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	//NOTE: We run the emulation logic in another thread to prevent menu navigation and window drags from blocking things...
-	//TODO: error checking below
-#ifdef _WIN32
-	_beginthread(emulationThread, 0, NULL);
-#else
-	pthread_create(&emulationThreadID, NULL, emulationThread, NULL);
-#endif
-
 	timing_addTimer(optimer, NULL, 10, TIMING_ENABLED);
+	cpuLimitTimer = timing_addTimer(cputimer, NULL, 10000, TIMING_DISABLED);
 	if (speed > 0) {
-		instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-		limitCPU = 1;
-		debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-		timing_addTimer(cputimer, NULL, 10000, TIMING_ENABLED);
+		setspeed(speed);
 	}
 	while (running) {
 		static uint32_t curloop = 0;
@@ -154,18 +150,8 @@ int main(int argc, char *argv[]) {
 				running = 0;
 				break;
 			case SDLCONSOLE_EVENT_DEBUG_1:
-				if (speed > 0) {
-					speed *= 0.9;
-					instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-					debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-				}
 				break;
 			case SDLCONSOLE_EVENT_DEBUG_2:
-				if (speed > 0) {
-					speed *= 1.1;
-					instructionsperloop = (uint32_t)((speed * 1000000.0) / 140000.0);
-					debug_log(DEBUG_INFO, "[MACHINE] Throttling speed to approximately a %.02f MHz 8088 (%lu instructions/sec)\r\n", speed, instructionsperloop * 10000);
-				}
 				break;
 			}
 

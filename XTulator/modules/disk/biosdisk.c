@@ -33,7 +33,6 @@
 #include "../../debuglog.h"
 
 DISK_t biosdisk[4];
-uint8_t biosdisk_hdcount = 0;
 uint8_t biosdisk_sectbuf[512];
 
 uint8_t bootdrive = 0xFF;
@@ -55,8 +54,7 @@ uint8_t biosdisk_insert(CPU_t* cpu, uint8_t drivenum, char* filename) {
 		biosdisk[drivenum].sects = 63;
 		biosdisk[drivenum].heads = 16;
 		biosdisk[drivenum].cyls = biosdisk[drivenum].filesize / (biosdisk[drivenum].sects * biosdisk[drivenum].heads * 512);
-		biosdisk_hdcount++;
-		cpu_write(cpu, 0x475, biosdisk_hdcount);
+		cpu_write(cpu, 0x475, biosdisk_gethdcount());
 	}
 	else {   //it's a floppy image
 		biosdisk[drivenum].cyls = 80;
@@ -79,8 +77,8 @@ uint8_t biosdisk_insert(CPU_t* cpu, uint8_t drivenum, char* filename) {
 
 void biosdisk_eject(CPU_t* cpu, uint8_t drivenum) {
 	biosdisk[drivenum].inserted = 0;
-	if ((drivenum >= 2) && (biosdisk_hdcount > 0)) {
-		biosdisk_hdcount--;
+	if (drivenum >= 2) {
+		cpu_write(cpu, 0x475, biosdisk_gethdcount());
 	}
 	if (biosdisk[drivenum].diskfile != NULL) fclose(biosdisk[drivenum].diskfile);
 }
@@ -126,7 +124,7 @@ void biosdisk_write(CPU_t* cpu, uint8_t drivenum, uint16_t dstseg, uint16_t dsto
 void biosdisk_int19h(CPU_t* cpu, uint8_t intnum) {
 	if (intnum != 0x19) return;
 	
-	cpu_write(cpu, 0x475, biosdisk_hdcount);
+	cpu_write(cpu, 0x475, biosdisk_gethdcount());
 
 	//put "STI" and then "JMP -1" code at bootloader location in case nothing gets read from disk
 	cpu_write(cpu, 0x07C00, 0xFB);
@@ -201,7 +199,7 @@ void biosdisk_int13h(CPU_t* cpu, uint8_t intnum) {
 				cpu->regs.byteregs[regbl] = 4; //else regs.byteregs[regbl] = 0;
 				cpu->regs.byteregs[regdl] = 2;
 			}
-			else cpu->regs.byteregs[regdl] = biosdisk_hdcount;
+			else cpu->regs.byteregs[regdl] = biosdisk_gethdcount();
 		}
 		else {
 			cpu->cf = 1;
@@ -217,7 +215,12 @@ void biosdisk_int13h(CPU_t* cpu, uint8_t intnum) {
 }
 
 uint8_t biosdisk_gethdcount() {
-	return biosdisk_hdcount;
+	uint8_t ret = 0, i;
+
+	for (i = 2; i < 4; i++) {
+		if (biosdisk[i].inserted) ret++;
+	}
+	return ret;
 }
 
 void biosdisk_init(CPU_t* cpu) {

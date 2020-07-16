@@ -24,9 +24,7 @@ It supports multiple machine definitions which are selectable via the command li
 
 I hope to get the stock IBM XT and other BIOSes bootable in the near future. They don't seem to like something about my chipset implementation, which is my highest priority bug at the moment.
 
-You cannot change floppy images on the fly yet. I'm trying to come up with a cross-platform GUI method to do this and change other options in real-time. If you need to install an OS and programs on a hard disk image, it may be best for now to do that in something like QEMU or Fake86, and then boot the HDD image in XTulator.
-
-[You can download the current ROM set for the defined machines by clicking here.](https://gofile.io/d/HDBU6i) (Links to gofile.io)
+You cannot change floppy images on the fly yet unless you're using the Windows build. I'm trying to come up with a cross-platform GUI method to do this and change other options in real-time. If you need to install an OS and programs on a hard disk image under Linux/Mac, it may be best for now to do that in something like QEMU or Fake86, and then boot the HDD image in XTulator.
 
 Checkmarks below mean that feature is implemented enough to boot and run things with the "generic_xt" machine definition. See comments below for details.
 
@@ -52,7 +50,7 @@ Checkmarks below mean that feature is implemented enough to boot and run things 
 
 ### Pre-compiled Win32 release
 
-You can download a pre-compiled Win32 binary [by clicking here](https://gofile.io/d/8wrNHA). It's v0.20.7.12 pre-alpha. It also includes a sample hard disk image with some very old software for testing with, as well as the current ROM set. To use the NE2000 Ethernet emulation, you will need to install [Npcap](https://nmap.org/npcap/).
+You can download a pre-compiled Win32 binary [by clicking here](https://xtulator.com/downloads/XTulator-0.20.7.15-pre_alpha.zip). It's v0.20.7.15 pre-alpha. It also includes a sample hard disk image with some very old shareware to test with, as well as the public domain BIOS ROM for the generic_xt machine. To use the NE2000 Ethernet emulation, you will need to install [Npcap](https://nmap.org/npcap/).
 
 ### Compiling from source
 

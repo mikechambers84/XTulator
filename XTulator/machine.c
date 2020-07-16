@@ -138,8 +138,6 @@ const MACHINEMEM_t machine_mem[][10] = {
 	},
 };
 
-extern double speed;
-
 uint8_t mac[6] = { 0xac, 0xde, 0x48, 0x88, 0xbb, 0xab };
 
 int machine_init_generic_xt(MACHINE_t* machine) {
