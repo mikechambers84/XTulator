@@ -800,7 +800,7 @@ FUNC_INLINE void op_div8(CPU_t* cpu, uint16_t valdiv, uint8_t divisor) {
 }
 
 FUNC_INLINE void op_idiv8(CPU_t* cpu, uint16_t valdiv, uint8_t divisor) {
-
+	//TODO: Rewrite IDIV code, I wrote this in 2011. It can be made far more efficient.
 	uint16_t	s1;
 	uint16_t	s2;
 	uint16_t	d1;
@@ -928,7 +928,7 @@ FUNC_INLINE void op_div16(CPU_t* cpu, uint32_t valdiv, uint16_t divisor) {
 }
 
 FUNC_INLINE void op_idiv16(CPU_t* cpu, uint32_t valdiv, uint16_t divisor) {
-
+	//TODO: Rewrite IDIV code, I wrote this in 2011. It can be made far more efficient.
 	uint32_t	d1;
 	uint32_t	d2;
 	uint32_t	s1;

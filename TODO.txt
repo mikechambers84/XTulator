@@ -18,6 +18,6 @@ Sound Blaster 2.0 high speed DMA mode, and fix glitches in certain games.
 
 Make my own OPL2 code not suck so bad/be completely broken.
 
-Novel NE2000 support.
-
 Fix chipset bugs that causes most BIOSes to not boot.
+
+Rewrite that old IDIV code in the CPU, it can be refactored to be much more simple and efficient.
