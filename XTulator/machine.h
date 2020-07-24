@@ -45,6 +45,7 @@
 #define MACHINE_HW_SKIP_UART1			0x1000000000000000ULL
 #define MACHINE_HW_SKIP_DISK			0x0800000000000000ULL
 #define MACHINE_HW_SKIP_RTC				0x0400000000000000ULL
+#define MACHINE_HW_SKIP_CHIPSET			0x0200000000000000ULL
 
 typedef struct {
 	CPU_t CPU;
@@ -89,6 +90,7 @@ typedef struct {
 } MACHINEDEF_t;
 
 int machine_init_generic_xt(MACHINE_t* machine);
+int machine_init_test(MACHINE_t* machine);
 int machine_init(MACHINE_t* machine, char* id);
 void machine_list();
 

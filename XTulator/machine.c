@@ -64,6 +64,10 @@ const MACHINEDEF_t machine_defs[] = {
 	{ "xi8088", "Xi 8088", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	{ "zenithss", "Zenith SuperSport 8088", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	{ "landmark", "Supersoft/Landmark diagnostic ROM", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
+	//tests
+	{ "test_div", "Test ROM - Division", machine_init_test, VIDEO_CARD_CGA, -1, MACHINE_HW_SKIP_CHIPSET },
+	{ "test_control", "Test ROM - Control", machine_init_test, VIDEO_CARD_CGA, -1, MACHINE_HW_SKIP_CHIPSET },
+	{ "test_add", "Test ROM - Addition", machine_init_test, VIDEO_CARD_CGA, -1, MACHINE_HW_SKIP_CHIPSET },
 	{ NULL }
 };
 
@@ -136,6 +140,28 @@ const MACHINEMEM_t machine_mem[][10] = {
 		{ MACHINE_MEM_ROM, 0xF8000, 0x08000, MACHINE_ROM_REQUIRED, "roms/machine/landmark/landmark.bin" },
 		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
 	},
+
+	//div test
+	{
+		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
+		{ MACHINE_MEM_ROM, 0xF0000, 0x10000, MACHINE_ROM_REQUIRED, "roms/machine/tests/div.bin" },
+		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
+	},
+
+	//control test
+	{
+		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
+		{ MACHINE_MEM_ROM, 0xF0000, 0x10000, MACHINE_ROM_REQUIRED, "roms/machine/tests/control.bin" },
+		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
+	},
+
+	//addition test
+	{
+		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
+		{ MACHINE_MEM_ROM, 0xF0000, 0x10000, MACHINE_ROM_REQUIRED, "roms/machine/tests/add.bin" },
+		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
+	},
+
 };
 
 uint8_t mac[6] = { 0xac, 0xde, 0x48, 0x88, 0xbb, 0xab };
@@ -143,11 +169,13 @@ uint8_t mac[6] = { 0xac, 0xde, 0x48, 0x88, 0xbb, 0xab };
 int machine_init_generic_xt(MACHINE_t* machine) {
 	if (machine == NULL) return -1;
 
-	i8259_init(&machine->i8259);
-	i8253_init(&machine->i8253, &machine->i8259, &machine->pcspeaker);
-	i8237_init(&machine->i8237, &machine->CPU);
-	i8255_init(&machine->i8255, &machine->KeyState, &machine->pcspeaker);
-	pcspeaker_init(&machine->pcspeaker);
+	if ((machine->hwflags & MACHINE_HW_SKIP_CHIPSET) == 0) {
+		i8259_init(&machine->i8259);
+		i8253_init(&machine->i8253, &machine->i8259, &machine->pcspeaker);
+		i8237_init(&machine->i8237, &machine->CPU);
+		i8255_init(&machine->i8255, &machine->KeyState, &machine->pcspeaker);
+		pcspeaker_init(&machine->pcspeaker);
+	}
 
 	//check machine HW flags and init devices accordingly
 	if ((machine->hwflags & MACHINE_HW_BLASTER) && !(machine->hwflags & MACHINE_HW_SKIP_BLASTER)) {
@@ -215,6 +243,21 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 #else
 	biosdisk_init(&machine->CPU);
 #endif
+
+	switch (videocard) {
+	case VIDEO_CARD_CGA:
+		if (cga_init()) return -1;
+		break;
+	case VIDEO_CARD_VGA:
+		if (vga_init()) return -1;
+		break;
+	}
+
+	return 0;
+}
+
+int machine_init_test(MACHINE_t* machine) {
+	cpu_reset(&machine->CPU);
 
 	switch (videocard) {
 	case VIDEO_CARD_CGA:

@@ -481,8 +481,8 @@ void cpu_reset(CPU_t* cpu) {
 	for (i = 0; i < 256; i++) {
 		cpu->int_callback[i] = NULL;
 	}
-	cpu->segregs[regcs] = 0xFFFF;
-	cpu->ip = 0x0000;
+	cpu->segregs[regcs] = 0xF000;
+	cpu->ip = 0xFFF0;
 	cpu->hltstate = 0;
 	cpu->trap_toggle = 0;
 }

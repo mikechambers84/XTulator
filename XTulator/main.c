@@ -50,6 +50,8 @@ volatile double speed = 0;
 
 volatile uint8_t running = 1;
 
+uint8_t cpudebug = 0;
+
 MACHINE_t machine;
 
 void optimer(void* dummy) {
@@ -133,7 +135,9 @@ int main(int argc, char *argv[]) {
 			goCPU = 1;
 		}
 		if (goCPU) {
-			cpu_interruptCheck(&machine.CPU, &machine.i8259);
+			if ((machine.hwflags & MACHINE_HW_SKIP_CHIPSET) == 0) {
+				cpu_interruptCheck(&machine.CPU, &machine.i8259);
+			}
 			cpu_exec(&machine.CPU, instructionsperloop);
 			ops += instructionsperloop;
 			goCPU = 0;
@@ -151,6 +155,24 @@ int main(int argc, char *argv[]) {
 				running = 0;
 				break;
 			case SDLCONSOLE_EVENT_DEBUG_1:
+				//dump RAM
+				/*{
+					FILE* dump = NULL;
+					uint32_t i;
+					dump = fopen("dump.bin", "wb");
+					if (dump != NULL) {
+						for (i = 0; i < MEMORY_RANGE; i++) {
+							uint8_t val;
+							val = cpu_read(&machine.CPU, i);
+							fwrite(&val, 1, 1, dump);
+						}
+						fclose(dump);
+						debug_log(DEBUG_INFO, "[DEBUG] Dumped memory to dump.bin\r\n");
+					}
+					else {
+						debug_log(DEBUG_ERROR, "[DEBUG] FAILED to dump memory!\r\n");
+					}
+				}*/
 				break;
 			case SDLCONSOLE_EVENT_DEBUG_2:
 				break;
