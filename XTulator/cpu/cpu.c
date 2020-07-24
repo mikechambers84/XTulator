@@ -845,10 +845,11 @@ FUNC_INLINE void op_grp3_8(CPU_t* cpu) {
 
 	case 2: /* NOT */
 		cpu->res8 = ~cpu->oper1b;
+		flag_log8(cpu, cpu->res8);
 		break;
 
 	case 3: /* NEG */
-		cpu->res8 = (~cpu->oper1b) + 1;
+		cpu->res8 = 0 - cpu->oper1b; // (~cpu->oper1b) + 1;
 		flag_sub8(cpu, 0, cpu->oper1b);
 		if (cpu->res8 == 0) {
 			cpu->cf = 0;
@@ -861,7 +862,7 @@ FUNC_INLINE void op_grp3_8(CPU_t* cpu) {
 	case 4: /* MUL */
 		cpu->temp1 = (uint32_t)cpu->oper1b * (uint32_t)cpu->regs.byteregs[regal];
 		cpu->regs.wordregs[regax] = cpu->temp1 & 0xFFFF;
-		flag_szp8(cpu, (uint8_t)cpu->temp1);
+		flag_szp8(cpu, (uint8_t)cpu->oper1b);
 		if (cpu->regs.byteregs[regah]) {
 			cpu->cf = 1;
 			cpu->of = 1;
@@ -887,7 +888,7 @@ FUNC_INLINE void op_grp3_8(CPU_t* cpu) {
 			cpu->temp2 = cpu->temp2 | 0xFFFFFF00;
 		}
 
-		cpu->temp3 = (cpu->temp1 * cpu->temp2) & 0xFFFF;
+		cpu->temp3 = (uint32_t)((int32_t)cpu->temp1 * (int32_t)cpu->temp2);
 		cpu->regs.wordregs[regax] = cpu->temp3 & 0xFFFF;
 		if (cpu->regs.byteregs[regah]) {
 			cpu->cf = 1;
@@ -972,10 +973,11 @@ FUNC_INLINE void op_grp3_16(CPU_t* cpu) {
 
 	case 2: /* NOT */
 		cpu->res16 = ~cpu->oper1;
+		flag_log16(cpu, cpu->res16);
 		break;
 
 	case 3: /* NEG */
-		cpu->res16 = (~cpu->oper1) + 1;
+		cpu->res16 = 0 - cpu->oper1; // (~cpu->oper1) + 1;
 		flag_sub16(cpu, 0, cpu->oper1);
 		if (cpu->res16) {
 			cpu->cf = 1;
@@ -989,7 +991,7 @@ FUNC_INLINE void op_grp3_16(CPU_t* cpu) {
 		cpu->temp1 = (uint32_t)cpu->oper1 * (uint32_t)cpu->regs.wordregs[regax];
 		cpu->regs.wordregs[regax] = cpu->temp1 & 0xFFFF;
 		cpu->regs.wordregs[regdx] = cpu->temp1 >> 16;
-		flag_szp16(cpu, (uint16_t)cpu->temp1);
+		flag_szp16(cpu, (uint16_t)cpu->oper1);
 		if (cpu->regs.wordregs[regdx]) {
 			cpu->cf = 1;
 			cpu->of = 1;
@@ -1014,7 +1016,7 @@ FUNC_INLINE void op_grp3_16(CPU_t* cpu) {
 			cpu->temp2 |= 0xFFFF0000;
 		}
 
-		cpu->temp3 = cpu->temp1 * cpu->temp2;
+		cpu->temp3 = (uint32_t)((int32_t)cpu->temp1 * (int32_t)cpu->temp2);
 		cpu->regs.wordregs[regax] = cpu->temp3 & 0xFFFF;	/* into register ax */
 		cpu->regs.wordregs[regdx] = cpu->temp3 >> 16;	/* into register dx */
 		if (cpu->regs.wordregs[regdx]) {
@@ -1936,7 +1938,7 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 				cpu->temp2 = cpu->temp2 | 0xFFFF0000L;
 			}
 
-			cpu->temp3 = cpu->temp1 * cpu->temp2;
+			cpu->temp3 = (uint32_t)((int32_t)cpu->temp1 * (int32_t)cpu->temp2);
 			putreg16(cpu, cpu->reg, cpu->temp3 & 0xFFFFL);
 			if (cpu->temp3 & 0xFFFF0000L) {
 				cpu->cf = 1;
@@ -1966,7 +1968,7 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 				cpu->temp2 = cpu->temp2 | 0xFFFF0000L;
 			}
 
-			cpu->temp3 = cpu->temp1 * cpu->temp2;
+			cpu->temp3 = (uint32_t)((int32_t)cpu->temp1 * (int32_t)cpu->temp2);
 			putreg16(cpu, cpu->reg, cpu->temp3 & 0xFFFFL);
 			if (cpu->temp3 & 0xFFFF0000L) {
 				cpu->cf = 1;
