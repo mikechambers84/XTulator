@@ -61,6 +61,12 @@
     <Filter Include="Header Files\modules\io">
       <UniqueIdentifier>{de0d3374-1dea-4ac7-a9a1-5b8cb4758adb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\modules\misc">
+      <UniqueIdentifier>{65e784ab-7558-4a05-92c4-cc4448ca0c89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\modules\misc">
+      <UniqueIdentifier>{0eb67a40-88d2-473e-b1bc-f37b69e5eae2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu\cpu.c">
@@ -152,6 +158,9 @@
     </ClCompile>
     <ClCompile Include="menus.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\misc\ds12885.c">
+      <Filter>Source Files\modules\misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -256,6 +265,9 @@
     </ClInclude>
     <ClInclude Include="menus.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\misc\ds12885.h">
+      <Filter>Header Files\modules\misc</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

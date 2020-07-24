@@ -10,7 +10,7 @@
 //#define DEBUG_VGA
 //#define DEBUG_CGA
 //#define DEBUG_PIT
-//#define DEBUG_PIC
+#define DEBUG_PIC
 //#define DEBUG_PPI
 //#define DEBUG_UART
 //#define DEBUG_TCPMODEM

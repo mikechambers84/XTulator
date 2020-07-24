@@ -18,61 +18,71 @@
 */
 
 /*
-	Generic RTC interface, works with TIMER.COM version 1.2
+	DS12885 CMOS/RTC chip
 */
 
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "config.h"
-#include "ports.h"
-#include "debuglog.h"
-#include "machine.h"
-#include "chipset/i8259.h"
+#include "../../config.h"
+#include "../../ports.h"
+#include "../../debuglog.h"
+#include "../../machine.h"
+#include "../../chipset/i8259.h"
+
+MACHINE_t* nvr_useMachine = NULL;
+uint8_t nvr_RAM[128], nvr_addr = 0;
 
 #ifdef _WIN32
 
 #include <Windows.h>
 
-uint8_t rtc_read(void* dummy, uint16_t addr) {
+void nvr_write(void* dummy, uint16_t addr, uint8_t value) {
+	debug_log(DEBUG_INFO, "[NVRAM] Write %03X <- %02X\r\n", addr, value);
+	addr &= 1;
+	if (addr == 0) {
+		nvr_addr = value;
+	}
+	else {
+		switch (nvr_addr & 0x7F) {
+		case 0x0C:
+		case 0x0D:
+			break;
+		default:
+			nvr_RAM[nvr_addr & 0x7F] = value;
+			break;
+		}
+
+		if (!(nvr_addr & 0x80)) {
+			i8259_doirq(&nvr_useMachine->i8259b, 0);
+		}
+	}
+}
+
+uint8_t nvr_read(void* dummy, uint16_t addr) {
 	uint8_t ret = 0xFF;
 	SYSTEMTIME tdata;
 
-	GetLocalTime(&tdata);
+	debug_log(DEBUG_INFO, "[NVRAM] Read %03X\r\n", addr);
 
-	addr &= 0x1F;
-	switch (addr) {
-	case 1:
-		ret = (uint8_t)tdata.wMilliseconds / 10;
-		break;
-	case 2:
-		ret = (uint8_t)tdata.wSecond;
-		break;
-	case 3:
-		ret = (uint8_t)tdata.wMinute;
-		break;
-	case 4:
-		ret = (uint8_t)tdata.wHour;
-		break;
-	case 5:
-		ret = (uint8_t)tdata.wDayOfWeek;
-		break;
-	case 6:
-		ret = (uint8_t)tdata.wDay;
-		break;
-	case 7:
-		ret = (uint8_t)tdata.wMonth;
-		break;
-	case 9:
-		ret = (uint8_t)tdata.wYear % 100;
-		break;
-	}
-
-	if (ret != 0xFF) {
-		uint8_t rh, rl;
-		rh = (ret / 10) % 10;
-		rl = ret % 10;
-		ret = (rh << 4) | rl;
+	if (addr & 1) {
+		if ((nvr_addr & 0x7F) < 0x0A) {
+			GetLocalTime(&tdata);
+			ret = 0x01;
+		}
+		else {
+			ret = nvr_RAM[nvr_addr & 0x7F];
+			switch (nvr_addr & 0x7F) {
+			case 0x00:
+				break;
+			case 0x0C:
+				nvr_RAM[0x0C] = 0;
+				break;
+			case 0x0D:
+				ret = 0x80;
+				break;
+			}
+		}
 	}
 
 	return ret;
@@ -128,11 +138,9 @@ uint8_t rtc_read(void* dummy, uint16_t addr) {
 
 #endif
 
-void rtc_write(void* dummy, uint16_t addr, uint8_t value) {
-
-}
-
-void rtc_init() {
-	debug_log(DEBUG_INFO, "[RTC] Initializing real time clock\r\n");
-	ports_cbRegister(0x240, 0x18, (void*)rtc_read, NULL, (void*)rtc_write, NULL, NULL);
+void nvr_init(MACHINE_t* machine) {
+	debug_log(DEBUG_INFO, "[NVR] Initializing DS12885 CMOS/RTC\r\n");
+	nvr_useMachine = machine;
+	ports_cbRegister(0x70, 16, (void*)nvr_read, NULL, (void*)nvr_write, NULL, NULL);
+	memset(nvr_RAM, 0, 128);
 }

@@ -136,7 +136,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (goCPU) {
 			if ((machine.hwflags & MACHINE_HW_SKIP_CHIPSET) == 0) {
-				cpu_interruptCheck(&machine.CPU, &machine.i8259);
+				cpu_interruptCheck(&machine.CPU, &machine.i8259, &machine.i8259b);
 			}
 			cpu_exec(&machine.CPU, instructionsperloop);
 			ops += instructionsperloop;

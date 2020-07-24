@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "cpu/cpu.h"
+#include "machine.h"
 
 uint8_t rtc_read(void* dummy, uint16_t addr);
 void rtc_write(void* dummy, uint16_t addr, uint8_t value);

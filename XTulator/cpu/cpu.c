@@ -1104,12 +1104,27 @@ FUNC_INLINE void cpu_intcall(CPU_t* cpu, uint8_t intnum) {
 	cpu->tf = 0;
 }
 
-void cpu_interruptCheck(CPU_t* cpu, I8259_t* i8259) {
+void cpu_interruptCheck(CPU_t* cpu, I8259_t* i8259, I8259_t* i8259b) {
 	/* get next interrupt from the i8259, if any */
 	if (!cpu->trap_toggle && (cpu->ifl && (i8259->irr & (~i8259->imr)))) {
 		cpu->hltstate = 0;
 		cpu_intcall(cpu, i8259_nextintr(i8259));
 	}
+	else if (!cpu->trap_toggle && (cpu->ifl && (i8259b->irr & (~i8259b->imr)))) {
+		cpu->hltstate = 0;
+		cpu_intcall(cpu, i8259_nextintr(i8259b));
+		debug_log(DEBUG_INFO, "slave irq\r\n");
+	}
+}
+
+void cpu_ext_ops(CPU_t* cpu) {
+	//for 2-byte 0F XX opcodes
+	cpu->opcode = getmem8(cpu, cpu->segregs[regcs], cpu->ip);
+	StepIP(cpu, 1);
+	modregrm(cpu);
+
+	printf("0F %02X reg=%u, rm=%u\r\n", cpu->opcode, cpu->reg, cpu->rm);
+	exit(1);
 }
 
 void cpu_exec(CPU_t* cpu, uint32_t execloops) {
@@ -1302,6 +1317,10 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 #ifdef CPU_ALLOW_POP_CS //only the 8086/8088 does this.
 		case 0xF: //0F POP CS
 			cpu->segregs[regcs] = pop(cpu);
+			break;
+#else
+		case 0xF: /* two-byte opcodes */
+			cpu_ext_ops(cpu);
 			break;
 #endif
 
@@ -3263,7 +3282,7 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 #ifdef CPU_ALLOW_ILLEGAL_OP_EXCEPTION
 			cpu_intcall(cpu, 6); /* trip invalid opcode exception. this occurs on the 80186+, 8086/8088 CPUs treat them as NOPs. */
 						   /* technically they aren't exactly like NOPs in most cases, but for our pursoses, that's accurate enough. */
-			debug_log(DEBUG_INFO, "[CPU] Invalid opcode exception at %04X:%04X\r\n", cpu->segregs[regcs], firstip);
+			debug_log(DEBUG_INFO, "[CPU] Invalid opcode exception at %04X:%04X = %02X\r\n", cpu->segregs[regcs], firstip, cpu->opcode);
 #endif
 			break;
 		}

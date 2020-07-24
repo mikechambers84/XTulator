@@ -158,7 +158,7 @@ void cpu_write(CPU_t* cpu, uint32_t addr32, uint8_t value);
 void cpu_writew(CPU_t* cpu, uint32_t addr32, uint16_t value);
 void cpu_intcall(CPU_t* cpu, uint8_t intnum);
 void cpu_reset(CPU_t* cpu);
-void cpu_interruptCheck(CPU_t* cpu, I8259_t* i8259);
+void cpu_interruptCheck(CPU_t* cpu, I8259_t* i8259, I8259_t* i8259b);
 void cpu_exec(CPU_t* cpu, uint32_t execloops);
 void port_write(CPU_t* cpu, uint16_t portnum, uint8_t value);
 void port_writew(CPU_t* cpu, uint16_t portnum, uint16_t value);

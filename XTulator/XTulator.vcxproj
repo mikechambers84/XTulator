@@ -172,6 +172,7 @@
     <ClCompile Include="modules\io\ne2000.c" />
     <ClCompile Include="modules\io\pcap-win32.c" />
     <ClCompile Include="modules\io\tcpmodem.c" />
+    <ClCompile Include="modules\misc\ds12885.c" />
     <ClCompile Include="modules\video\cga.c" />
     <ClCompile Include="modules\video\sdlconsole.c" />
     <ClCompile Include="modules\video\vga.c" />
@@ -208,6 +209,7 @@
     <ClInclude Include="modules\io\ne2000.h" />
     <ClInclude Include="modules\io\pcap-win32.h" />
     <ClInclude Include="modules\io\tcpmodem.h" />
+    <ClInclude Include="modules\misc\ds12885.h" />
     <ClInclude Include="modules\video\cga.h" />
     <ClInclude Include="modules\video\sdlconsole.h" />
     <ClInclude Include="modules\video\vga.h" />

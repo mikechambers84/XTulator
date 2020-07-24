@@ -36,9 +36,10 @@ typedef struct {
 	uint8_t vector;
 	uint8_t lastintr;
 	uint8_t enabled;
+	uint8_t isslave;
 } I8259_t;
 
-void i8259_init(I8259_t* i8259);
+void i8259_init(I8259_t* i8259, uint8_t slave);
 void i8259_doirq(I8259_t* i8259, uint8_t irqnum);
 uint8_t i8259_nextintr(I8259_t* i8259);
 void i8259_write(I8259_t* i8259, uint16_t portnum, uint8_t value);

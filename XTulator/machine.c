@@ -48,6 +48,7 @@
 #include "modules/video/cga.h"
 #include "modules/video/vga.h"
 #include "rtc.h"
+#include "modules/misc/ds12885.h"
 #include "memory.h"
 #include "utility.h"
 #include "timing.h"
@@ -64,6 +65,9 @@ const MACHINEDEF_t machine_defs[] = {
 	{ "xi8088", "Xi 8088", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	{ "zenithss", "Zenith SuperSport 8088", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	{ "landmark", "Supersoft/Landmark diagnostic ROM", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
+	{ "ami_286", "AMI 286 clone", machine_init_generic_286, VIDEO_CARD_VGA, 50.0, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
+	{ "award_286", "Award 286 clone", machine_init_generic_286, VIDEO_CARD_VGA, 50.0, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
+	{ "gw286ct", "gw286ct", machine_init_generic_286, VIDEO_CARD_VGA, 50.0, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	//tests
 	{ "test_div", "Test ROM - Division", machine_init_test, VIDEO_CARD_CGA, -1, MACHINE_HW_SKIP_CHIPSET },
 	{ "test_control", "Test ROM - Control", machine_init_test, VIDEO_CARD_CGA, -1, MACHINE_HW_SKIP_CHIPSET },
@@ -141,6 +145,36 @@ const MACHINEMEM_t machine_mem[][10] = {
 		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
 	},
 
+	//AMI 286 clone
+	{
+		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
+#ifndef USE_DISK_HLE
+		{ MACHINE_MEM_ROM, 0xD0000, 0x02000, MACHINE_ROM_REQUIRED, "roms/disk/ide_xt.bin" },
+#endif
+		{ MACHINE_MEM_ROM, 0xF0000, 0x10000, MACHINE_ROM_REQUIRED, "roms/machine/ami_286/AMIC206.BIN" },
+		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
+	},
+
+	//Award 286 clone
+	{
+		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
+#ifndef USE_DISK_HLE
+		{ MACHINE_MEM_ROM, 0xD0000, 0x02000, MACHINE_ROM_REQUIRED, "roms/disk/ide_xt.bin" },
+#endif
+		{ MACHINE_MEM_ROM, 0xF0000, 0x10000, MACHINE_ROM_REQUIRED, "roms/machine/award_286/award.bin" },
+		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
+	},
+
+	//gw286ct
+	{
+		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
+#ifndef USE_DISK_HLE
+		{ MACHINE_MEM_ROM, 0xD0000, 0x02000, MACHINE_ROM_REQUIRED, "roms/disk/ide_xt.bin" },
+#endif
+		{ MACHINE_MEM_ROM, 0xF0000, 0x10000, MACHINE_ROM_REQUIRED, "roms/machine/gw286ct/2ctc001.bin" },
+		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
+	},
+
 	//div test
 	{
 		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
@@ -170,7 +204,7 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 	if (machine == NULL) return -1;
 
 	if ((machine->hwflags & MACHINE_HW_SKIP_CHIPSET) == 0) {
-		i8259_init(&machine->i8259);
+		i8259_init(&machine->i8259, 0);
 		i8253_init(&machine->i8253, &machine->i8259, &machine->pcspeaker);
 		i8237_init(&machine->i8237, &machine->CPU);
 		i8255_init(&machine->i8255, &machine->KeyState, &machine->pcspeaker);
@@ -190,8 +224,98 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 		machine->mixOPL = 1;
 	}
 	if ((machine->hwflags & MACHINE_HW_RTC) && !(machine->hwflags & MACHINE_HW_SKIP_RTC)) {
-		rtc_init(&machine->CPU);
+		rtc_init();
 	}
+
+	if ((machine->hwflags & MACHINE_HW_UART0_NONE) && !(machine->hwflags & MACHINE_HW_SKIP_UART0)) {
+		uart_init(&machine->UART[0], &machine->i8259, 0x3F8, 4, NULL, NULL, NULL, NULL);
+	}
+	else if ((machine->hwflags & MACHINE_HW_UART0_MOUSE) && !(machine->hwflags & MACHINE_HW_SKIP_UART0)) {
+		uart_init(&machine->UART[0], &machine->i8259, 0x3F8, 4, NULL, NULL, (void*)mouse_togglereset, NULL);
+		mouse_init(&machine->UART[0]);
+		timing_addTimer(mouse_rxpoll, NULL, baudrate / 9, TIMING_ENABLED);
+	}
+#ifdef ENABLE_TCP_MODEM
+	else if ((machine->hwflags & MACHINE_HW_UART0_TCPMODEM) && !(machine->hwflags & MACHINE_HW_SKIP_UART0)) {
+		uart_init(&machine->UART[0], &machine->i8259, 0x3F8, 4, (void*)tcpmodem_tx, &machine->tcpmodem[0], NULL, NULL);
+		tcpmodem_init(&machine->tcpmodem[0], &machine->UART[0], 23);
+		timing_addTimer(tcpmodem_rxpoll, &machine->tcpmodem[0], baudrate / 9, TIMING_ENABLED);
+	}
+#endif
+
+	if ((machine->hwflags & MACHINE_HW_UART1_NONE) && !(machine->hwflags & MACHINE_HW_SKIP_UART1)) {
+		uart_init(&machine->UART[1], &machine->i8259, 0x2F8, 3, NULL, NULL, NULL, NULL);
+	}
+	else if ((machine->hwflags & MACHINE_HW_UART1_MOUSE) && !(machine->hwflags & MACHINE_HW_SKIP_UART1)) {
+		uart_init(&machine->UART[1], &machine->i8259, 0x2F8, 3, NULL, NULL, (void*)mouse_togglereset, NULL);
+		mouse_init(&machine->UART[1]);
+		timing_addTimer(mouse_rxpoll, NULL, baudrate / 9, TIMING_ENABLED);
+	}
+#ifdef ENABLE_TCP_MODEM
+	else if ((machine->hwflags & MACHINE_HW_UART1_TCPMODEM) && !(machine->hwflags & MACHINE_HW_SKIP_UART1)) {
+		uart_init(&machine->UART[1], &machine->i8259, 0x2F8, 3, (void*)tcpmodem_tx, &machine->tcpmodem[1], NULL, NULL);
+		tcpmodem_init(&machine->tcpmodem[1], &machine->UART[1], 23);
+		timing_addTimer(tcpmodem_rxpoll, &machine->tcpmodem[1], baudrate / 9, TIMING_ENABLED);
+	}
+#endif
+
+#ifdef USE_NE2000
+	if (machine->hwflags & MACHINE_HW_NE2000) {
+		ne2000_init(&machine->ne2000, &machine->i8259, 0x300, 2, (uint8_t*)&mac);
+		if (machine->pcap_if > -1) {
+			if (pcap_init(&machine->ne2000, machine->pcap_if)) {
+				return -1;
+			}
+		}
+	}
+#endif
+
+	cpu_reset(&machine->CPU);
+#ifndef USE_DISK_HLE
+	fdc_init(&fdc, &machine->CPU, &i8259, &i8237);
+	fdc_insert(&fdc, 0, "dos622.img");
+#else
+	biosdisk_init(&machine->CPU);
+#endif
+
+	switch (videocard) {
+	case VIDEO_CARD_CGA:
+		if (cga_init()) return -1;
+		break;
+	case VIDEO_CARD_VGA:
+		if (vga_init()) return -1;
+		break;
+	}
+
+	return 0;
+}
+
+int machine_init_generic_286(MACHINE_t* machine) {
+	if (machine == NULL) return -1;
+
+	if ((machine->hwflags & MACHINE_HW_SKIP_CHIPSET) == 0) {
+		i8259_init(&machine->i8259, 0);
+		i8259_init(&machine->i8259b, 1);
+		i8253_init(&machine->i8253, &machine->i8259, &machine->pcspeaker);
+		i8237_init(&machine->i8237, &machine->CPU);
+		i8255_init(&machine->i8255, &machine->KeyState, &machine->pcspeaker);
+		pcspeaker_init(&machine->pcspeaker);
+	}
+
+	//check machine HW flags and init devices accordingly
+	if ((machine->hwflags & MACHINE_HW_BLASTER) && !(machine->hwflags & MACHINE_HW_SKIP_BLASTER)) {
+		blaster_init(&machine->blaster, &machine->i8237, &machine->i8259, 0x220, 1, 5);
+		OPL3_init(&machine->OPL3);
+		machine->mixBlaster = 1;
+		machine->mixOPL = 1;
+	}
+	else if ((machine->hwflags & MACHINE_HW_OPL) && !(machine->hwflags & MACHINE_HW_SKIP_OPL)) { //else if because some games won't detect an SB without seeing the OPL, so if SB enabled then OPL already is
+		//opl2_init(&machine->OPL2);
+		OPL3_init(&machine->OPL3);
+		machine->mixOPL = 1;
+	}
+
+	//nvr_init(machine);
 
 	if ((machine->hwflags & MACHINE_HW_UART0_NONE) && !(machine->hwflags & MACHINE_HW_SKIP_UART0)) {
 		uart_init(&machine->UART[0], &machine->i8259, 0x3F8, 4, NULL, NULL, NULL, NULL);

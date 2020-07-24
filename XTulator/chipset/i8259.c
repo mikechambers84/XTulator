@@ -149,8 +149,14 @@ void i8259_doirq(I8259_t* i8259, uint8_t irqnum) {
 	i8259->irr |= (1 << irqnum) & (~i8259->imr);
 }
 
-void i8259_init(I8259_t* i8259) {
+void i8259_init(I8259_t* i8259, uint8_t slave) {
 	memset(i8259, 0, sizeof(I8259_t));
 	i8259->intoffset = 8;
-	ports_cbRegister(0x20, 2, (void*)i8259_read, NULL, (void*)i8259_write, NULL, i8259);
+	i8259->isslave = slave;
+	if (slave == 0) {
+		ports_cbRegister(0x20, 2, (void*)i8259_read, NULL, (void*)i8259_write, NULL, i8259);
+	}
+	else {
+		ports_cbRegister(0xA0, 2, (void*)i8259_read, NULL, (void*)i8259_write, NULL, i8259);
+	}
 }

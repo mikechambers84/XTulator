@@ -50,6 +50,7 @@
 typedef struct {
 	CPU_t CPU;
 	I8259_t i8259;
+	I8259_t i8259b;
 	I8253_t i8253;
 	I8237_t i8237;
 	I8255_t i8255;
@@ -91,6 +92,7 @@ typedef struct {
 
 int machine_init_generic_xt(MACHINE_t* machine);
 int machine_init_test(MACHINE_t* machine);
+int machine_init_generic_286(MACHINE_t* machine);
 int machine_init(MACHINE_t* machine, char* id);
 void machine_list();
 
