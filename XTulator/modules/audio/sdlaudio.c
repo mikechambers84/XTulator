@@ -39,7 +39,7 @@
 #include <process.h>
 #else
 #include <sys/time.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <pthread.h>
 pthread_t sdlaudio_sampleThreadID;
 #endif

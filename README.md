@@ -62,15 +62,13 @@ The repository includes a Visual Studio 2019 solution and project. You will need
 
 ##### Linux
 
-Sorry, there's no configure script or makefile yet, so you'l have to compile and link it by hand.
+CMake builds are supported, install dependencies with the command below
 
-You will need the SDL2 and pcap dev libraries. On Debian/Ubuntu and related distributions, you can install it with the following line.
-
-<pre><code>sudo apt-get install libsdl2-dev libpcap-dev</code></pre>
+<pre><code>sudo apt-get install libsdl2-dev libpcap-dev cmake</code></pre>
 
 After this, the following line should successfully compile the code.
 
-<pre><code>gcc -O3 -o XTulator XTulator/*.c XTulator/chipset/*.c XTulator/cpu/cpu.c XTulator/modules/audio/*.c XTulator/modules/disk/*.c XTulator/modules/input/*.c XTulator/modules/io/*.c XTulator/modules/video/*.c -lm -lpthread `pcap-config --cflags --libs` `sdl2-config --cflags --libs`</code></pre>
+<pre><code>mkdir build && cd build && cmake .. && make</code></pre>
 
 
 ### Some screenshots

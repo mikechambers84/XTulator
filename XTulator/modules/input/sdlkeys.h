@@ -5,7 +5,7 @@
 #ifdef _WIN32
 #include <SDL/SDL.h>
 #else
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #endif
 
 const uint32_t sdlconsole_translateMatrix[95][2] = {

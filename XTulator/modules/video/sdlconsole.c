@@ -24,7 +24,7 @@
 #include <SDL/SDL_syswm.h>
 #include <Windows.h>
 #else
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #endif
 #include <stdio.h>
 #include <stdint.h>
