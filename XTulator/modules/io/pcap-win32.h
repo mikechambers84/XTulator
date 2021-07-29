@@ -13,10 +13,7 @@ void pcap_rx_handler(u_char* param, const struct pcap_pkthdr* header, const u_ch
 void pcap_listdevs();
 int pcap_init(NE2000_t* ne2000, int dev);
 void pcap_dispatchThread();
-void pcap_rxPacket();
 void pcap_txPacket(u_char* data, int len);
-
-extern volatile uint8_t pcap_havePacket;
 
 #endif //USE_NE2000
 

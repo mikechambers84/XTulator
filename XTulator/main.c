@@ -157,9 +157,6 @@ int main(int argc, char *argv[]) {
 			}
 
 
-#ifdef USE_NE2000
-			pcap_rxPacket();
-#endif
 			curloop = 0;
 		}
 	}

@@ -40,11 +40,7 @@ pthread_t pcap_dispatchThreadID;
 #include "ne2000.h"
 #include "pcap-win32.h"
 
-volatile uint8_t pcap_havePacket = 0;
 pcap_t* pcap_adhandle;
-
-volatile u_char pcap_packetData[2048];
-volatile uint32_t pcap_len = 0;
 
 NE2000_t* pcap_ne2000 = NULL;
 
@@ -118,6 +114,8 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 
 	pcap_ne2000 = ne2000;
 
+
+
 #ifdef _WIN32
 	_beginthread((void*)pcap_dispatchThread, 0, NULL);
 #else
@@ -128,31 +126,19 @@ int pcap_init(NE2000_t* ne2000, int dev) {
 }
 
 void pcap_dispatchThread() {
-	while (running) {
+	pcap_loop(pcap_adhandle, 0, pcap_rx_handler, NULL);
+	/*while (running) {
 		pcap_dispatch(pcap_adhandle, 1, pcap_rx_handler, NULL);
 		if (pcap_havePacket == 0) {
 			utility_sleep(1);
 		}
-	}
+	}*/
 }
 
 void pcap_rx_handler(u_char* param, const struct pcap_pkthdr* header, const u_char* pkt_data) {
 	(void)(param); //unused variable
 
-	while (pcap_havePacket) {}
-
-	pcap_len = header->caplen;
-	if (pcap_len > 2048) return;
-	memcpy((void*)pcap_packetData, pkt_data, header->caplen);
-	pcap_havePacket = 1;
-	//debug_log(DEBUG_INFO, "len:%d\n", header->len);
-}
-
-void pcap_rxPacket() {
-	if (pcap_havePacket) {
-		ne2000_rx_frame(pcap_ne2000, (void*)pcap_packetData, pcap_len);
-		pcap_havePacket = 0;
-	}
+	ne2000_rx_frame(pcap_ne2000, (void*)pkt_data, header->caplen);
 }
 
 void pcap_txPacket(u_char* data, int len) {
