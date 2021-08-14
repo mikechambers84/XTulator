@@ -4,12 +4,12 @@
 
 XTulator is an x86 PC emulator that is designed to run software that was written for Intel processors up to the 80186. It's able to run MS-DOS, FreeDOS, Windows 3.0, and many games of the era. It supports graphics up to the EGA/VGA standard, and emulates the Sound Blaster 2.0 as well as Adlib/OPL2 (using Nuked OPL). It also emulates peripherals like the standard Microsoft-compatible serial mouse and a serial modem, which can simulate phone line connections via TCP. An NE2000 Ethernet adapter is also emulated using pcap.
 
-This is actually a rewrite of an emulator I wrote many years ago. It was poorly implemented, even though it worked fairly well. It had many hacks and a poor architecture, but most old 80186 software could still run under it. I've just never quite been happy with it, so I am writing this new emulator to be more sanely coded, and more accurate. I'm aiming to create a much more modular architecture this time around and avoid the design flaws which turned the old code into a mess.
+This is actually a rewrite of an emulator I wrote many years ago.
 
 ### Re-write goals
 
 - More sane architecture in general
-- Minimize (preferably eliminate) use of shared globals
+- Minimize use of shared globals
 - Implement a sort of generic "virtual ISA card" interface
 - Keep CPU and other modules as independent of each other as possible
 - Improve accuracy of chipset and components emulation
@@ -62,15 +62,13 @@ The repository includes a Visual Studio 2019 solution and project. You will need
 
 ##### Linux
 
-Sorry, there's no configure script or makefile yet, so you'l have to compile and link it by hand.
+CMake builds are supported, install dependencies with the command below
 
-You will need the SDL2 and pcap dev libraries. On Debian/Ubuntu and related distributions, you can install it with the following line.
-
-<pre><code>sudo apt-get install libsdl2-dev libpcap-dev</code></pre>
+<pre><code>sudo apt-get install libsdl2-dev libpcap-dev cmake</code></pre>
 
 After this, the following line should successfully compile the code.
 
-<pre><code>gcc -O3 -o XTulator XTulator/*.c XTulator/chipset/*.c XTulator/cpu/cpu.c XTulator/modules/audio/*.c XTulator/modules/disk/*.c XTulator/modules/input/*.c XTulator/modules/io/*.c XTulator/modules/video/*.c -lm -lpthread `pcap-config --cflags --libs` `sdl2-config --cflags --libs`</code></pre>
+<pre><code>mkdir build && cd build && cmake .. && make</code></pre>
 
 
 ### Some screenshots
