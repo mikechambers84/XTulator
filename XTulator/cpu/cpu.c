@@ -1949,7 +1949,7 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 			break;
 
 		case 0x6A:	/* 6A PUSH Ib (80186+) */
-			push(cpu, (uint16_t)getmem8(cpu, cpu->segregs[regcs], cpu->ip));
+			push(cpu, (uint16_t)signext(getmem8(cpu, cpu->segregs[regcs], cpu->ip)));
 			StepIP(cpu, 1);
 			break;
 
