@@ -168,6 +168,7 @@
     <ClCompile Include="modules\audio\sdlaudio.c" />
     <ClCompile Include="modules\disk\biosdisk.c" />
     <ClCompile Include="modules\disk\fdc.c" />
+    <ClCompile Include="modules\disk\xtide.c" />
     <ClCompile Include="modules\input\mouse.c" />
     <ClCompile Include="modules\io\ne2000.c" />
     <ClCompile Include="modules\io\pcap-win32.c" />
@@ -201,6 +202,7 @@
     <ClInclude Include="modules\audio\sdlaudio.h" />
     <ClInclude Include="modules\disk\biosdisk.h" />
     <ClInclude Include="modules\disk\fdc.h" />
+    <ClInclude Include="modules\disk\xtide.h" />
     <ClInclude Include="modules\input\input.h" />
     <ClInclude Include="modules\input\mouse.h" />
     <ClInclude Include="modules\input\sdlkeys.h" />

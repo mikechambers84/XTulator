@@ -3261,7 +3261,7 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 #ifdef CPU_ALLOW_ILLEGAL_OP_EXCEPTION
 			cpu_intcall(cpu, 6); /* trip invalid opcode exception. this occurs on the 80186+, 8086/8088 CPUs treat them as NOPs. */
 						   /* technically they aren't exactly like NOPs in most cases, but for our pursoses, that's accurate enough. */
-			debug_log(DEBUG_INFO, "[CPU] Invalid opcode exception at %04X:%04X\r\n", cpu->segregs[regcs], firstip);
+			debug_log(DEBUG_INFO, "[CPU] Invalid opcode exception at %04X:%04X (opcode value %02X)\r\n", cpu->segregs[regcs], firstip, cpu->opcode);
 #endif
 			break;
 		}

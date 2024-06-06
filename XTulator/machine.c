@@ -36,7 +36,11 @@
 #include "modules/audio/pcspeaker.h"
 #include "modules/audio/opl2.h"
 #include "modules/audio/blaster.h"
-#include "modules/disk/biosdisk.h"
+#ifndef USE_DISK_HLE
+	#include "modules/disk/xtide.h"
+#else
+	#include "modules/disk/biosdisk.h"
+#endif
 #include "modules/disk/fdc.h"
 #include "modules/input/mouse.h"
 #include "modules/input/input.h"
@@ -199,7 +203,7 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 
 #ifdef USE_NE2000
 	if (machine->hwflags & MACHINE_HW_NE2000) {
-		ne2000_init(&machine->ne2000, &machine->i8259, 0x300, 2, (uint8_t*)&mac);
+		ne2000_init(&machine->ne2000, &machine->i8259, 0x360, 2, (uint8_t*)&mac);
 		if (machine->pcap_if > -1) {
 			if (pcap_init(&machine->ne2000, machine->pcap_if)) {
 				return -1;
@@ -208,10 +212,15 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 	}
 #endif
 
+#ifndef USE_DISK_HLE
+	xtide_init();
+	xtide_mount(0, "hd0.img");
+#endif
+
 	cpu_reset(&machine->CPU);
 #ifndef USE_DISK_HLE
-	fdc_init(&fdc, &machine->CPU, &i8259, &i8237);
-	fdc_insert(&fdc, 0, "dos622.img");
+	//fdc_init(&fdc, &machine->CPU, &i8259, &i8237);
+	//fdc_insert(&fdc, 0, "dos622.img");
 #else
 	biosdisk_init(&machine->CPU);
 #endif

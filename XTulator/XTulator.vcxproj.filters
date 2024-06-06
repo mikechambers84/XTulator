@@ -153,6 +153,9 @@
     <ClCompile Include="menus.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="modules\disk\xtide.c">
+      <Filter>Source Files\modules\disk</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu\cpu.h">
@@ -256,6 +259,9 @@
     </ClInclude>
     <ClInclude Include="menus.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\disk\xtide.h">
+      <Filter>Header Files\modules\disk</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
