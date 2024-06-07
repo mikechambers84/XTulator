@@ -74,11 +74,15 @@ void xtide_buf_put(uint8_t* data, uint16_t len) {
 
 uint8_t xtide_buf_read() {
 	uint8_t ret;
+	//int i;
 	
 	if (xtide_buf_len == 0) return 0;
 
 	ret = xtide_buf[0];
 	memmove(xtide_buf, &xtide_buf[1], 5119);
+	//for (i = 1; i < 5120; i++) {
+	//	xtide_buf[i - 1] = xtide_buf[i];
+	//}
 	xtide_buf_len--;
 
 	return ret;
@@ -89,7 +93,7 @@ void xtide_ascii_word(uint16_t* dst, char* str) {
 	int pos = 0;
 	int i;
 	for (i = 0; i < len; i+=2) {
-		dst[pos++] = ((uint16_t)str[i] << 8) | str[i+1];
+		dst[pos++] = ((uint16_t)str[i+1] << 8) | str[i];
 	}
 }
 
@@ -116,6 +120,14 @@ void xtide_identify() {
 	buf[0x16] = 0; //ECC bytes on long operations
 	xtide_ascii_word(&buf[0x17], "v1.00   "); //firmware revision
 	xtide_ascii_word(&buf[0x1B], "XTulator virtual IDE disk               "); //model
+
+	{
+		int i;
+		for (i = 0; i < 512; i++) {
+			printf("%c", xtide_buf[i]);
+		}
+		printf("\n\n");
+	}
 }
 
 void xtide_read_multiple() {
@@ -198,6 +210,7 @@ uint8_t xtide_readport(void* dummy, uint16_t port) {
 	switch (port) {
 	case 0: //data
 		ret = xtide_buf_read();
+		printf("%c", ret);
 		break;
 	case 1: //error
 		ret = (xtide_status.err << 2);
