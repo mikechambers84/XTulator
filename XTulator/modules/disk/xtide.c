@@ -49,6 +49,7 @@ struct xtide_status_s {
 	uint8_t cyl_high;
 	uint8_t head;
 	uint8_t drive;
+	uint8_t drq;
 } xtide_status;
 
 struct xtide_disk_s {
@@ -72,18 +73,28 @@ void xtide_buf_put(uint8_t* data, uint16_t len) {
 	xtide_buf_len += len;
 }
 
-uint8_t xtide_buf_read() {
+uint8_t xtide_buf_read_l() {
 	uint8_t ret;
-	//int i;
+	int i;
 	
 	if (xtide_buf_len == 0) return 0;
 
 	ret = xtide_buf[0];
-	memmove(xtide_buf, &xtide_buf[1], 5119);
-	//for (i = 1; i < 5120; i++) {
-	//	xtide_buf[i - 1] = xtide_buf[i];
-	//}
-	xtide_buf_len--;
+
+	return ret;
+}
+
+uint8_t xtide_buf_read_h() {
+	uint8_t ret;
+
+	if (xtide_buf_len == 0) return 0;
+
+	ret = xtide_buf[1];
+	memmove(xtide_buf, &xtide_buf[2], 5118);
+	xtide_buf_len -= 2;
+	//printf("buf len %u\n", xtide_buf_len);
+
+	if (xtide_buf_len == 0) xtide_status.drq = 0;
 
 	return ret;
 }
@@ -93,7 +104,7 @@ void xtide_ascii_word(uint16_t* dst, char* str) {
 	int pos = 0;
 	int i;
 	for (i = 0; i < len; i+=2) {
-		dst[pos++] = ((uint16_t)str[i+1] << 8) | str[i];
+		dst[pos++] = ((uint16_t)str[i] << 8) | str[i+1];
 	}
 }
 
@@ -121,6 +132,8 @@ void xtide_identify() {
 	xtide_ascii_word(&buf[0x17], "v1.00   "); //firmware revision
 	xtide_ascii_word(&buf[0x1B], "XTulator virtual IDE disk               "); //model
 
+	xtide_status.drq = 1;
+
 	{
 		int i;
 		for (i = 0; i < 512; i++) {
@@ -130,7 +143,7 @@ void xtide_identify() {
 	}
 }
 
-void xtide_read_multiple() {
+void xtide_read_sectors(int retry) {
 	uint32_t cyl, head, sect, numsects, lba;
 	uint8_t disk;
 
@@ -146,17 +159,18 @@ void xtide_read_multiple() {
 	sect = xtide_status.sector_num;
 
 	lba = ((uint32_t)cyl * (uint32_t)xtide_disk[disk].heads + (uint32_t)head) * (uint32_t)xtide_disk[disk].sectors + (uint32_t)sect;
-	printf("disk seek: cyl %lu, head %lu, sect %lu\n", cyl, head, sect);
-	fseek(xtide_disk[disk].filehandle, SEEK_SET, lba * 512UL);
+	printf("disk read: cyl %lu, head %lu, sect %lu (%u multiple)\n", cyl, head, sect, xtide_status.sector_count);
+	fseek(xtide_disk[disk].filehandle, lba * 512UL, SEEK_SET);
 	fread(xtide_buf, 1, 512, xtide_disk[disk].filehandle);
 	xtide_buf_len = 512;
 	xtide_status.err = 0;
+	xtide_status.drq = 1;
 }
 
 void xtide_writeport(void* dummy, uint16_t port, uint8_t value) {
 	//printf("XTIDE write port %Xh: %02X\n", port, value);
 
-	port &= 7;
+	port &= 15;
 	switch (port) {
 	case 1: //precomp
 		break;
@@ -190,8 +204,11 @@ void xtide_writeport(void* dummy, uint16_t port, uint8_t value) {
 		case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x76: case 0x77: //all mean seek
 		case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7E: case 0x7F:
 			break;
-		case IDE_CMD_READ_MULTIPLE:
-			xtide_read_multiple();
+		case IDE_CMD_READ_SECTORS_WITH_RETRY:
+			xtide_read_sectors(1);
+			break;
+		case IDE_CMD_READ_SECTORS:
+			xtide_read_sectors(0);
 			break;
 		default: //unsupported commands
 			xtide_status.err = 1;
@@ -201,16 +218,31 @@ void xtide_writeport(void* dummy, uint16_t port, uint8_t value) {
 	}
 }
 
+void xtide_writeport_w(void* dummy, uint16_t port, uint16_t value) {
+	//printf("XTIDE write port %Xh: %02X\n", port, value);
+
+	printf("Write port WORD %X, %u\n", port, value);
+
+	if ((port & 7) == 0) {
+
+	}
+	else {
+	}
+}
+
 uint8_t xtide_readport(void* dummy, uint16_t port) {
 	uint8_t ret = 0;
-	static uint8_t blah = 0;
-	//printf("XTIDE read port %Xh = ", port);
+	static uint8_t busy = 0;
 
-	port &= 7;
+	port &= 15;
 	switch (port) {
 	case 0: //data
-		ret = xtide_buf_read();
-		printf("%c", ret);
+		ret = xtide_buf_read_l();
+		//printf("%c", ret);
+		break;
+	case 8: //data
+		ret = xtide_buf_read_h();
+		//printf("%c", ret);
 		break;
 	case 1: //error
 		ret = (xtide_status.err << 2);
@@ -218,13 +250,23 @@ uint8_t xtide_readport(void* dummy, uint16_t port) {
 	case 6: //drive/head
 		break;
 	case 7: //status
-		if (xtide_disk[xtide_status.drive].mounted) ret |= (1 << 6); //drive ready
-		if (xtide_buf_len > 0) ret |= (1 << 3); //sector buffer requires servicing
+	case 0xE:
+		if (xtide_disk[xtide_status.drive].mounted) ret = (busy << 7) | (1 << 6) | (1 << 4) | (1 << 1) | (xtide_status.drq << 3);
+		ret |= (xtide_status.err << 0);
+		//busy ^= 1;
 		break;
 
 	}
 
-	//printf("%02X\n", ret);
+	//if (port > 8) printf("XTIDE read port %Xh = %02X\n", port, ret);
+	return ret;
+}
+
+uint16_t xtide_readport_w(void* dummy, uint16_t port) {
+	uint16_t ret = 0;
+
+	printf("Read port WORD %X\n", port);
+
 	return ret;
 }
 
@@ -244,7 +286,7 @@ int xtide_mount(uint8_t disknum, char* filename) {
 
 	xtide_disk[disknum].sectors = 63;
 	xtide_disk[disknum].heads = 16;
-	xtide_disk[disknum].cyls = xtide_disk[disknum].filesize / (xtide_disk[disknum].sectors * xtide_disk[disknum].heads * 512);
+	xtide_disk[disknum].cyls = xtide_disk[disknum].filesize / (xtide_disk[disknum].sectors * xtide_disk[disknum].heads * 512UL);
 
 	xtide_disk[disknum].filename = filename;
 	xtide_disk[disknum].mounted = 1;
@@ -253,7 +295,8 @@ int xtide_mount(uint8_t disknum, char* filename) {
 }
 
 int xtide_init() {
-	ports_cbRegister(0x300, 8, (void*)xtide_readport, NULL, (void*)xtide_writeport, NULL, NULL);
+	//ports_cbRegister(0x300, 8, (void*)xtide_readport, (void*)xtide_readport_w, (void*)xtide_writeport, (void*)xtide_writeport_w, NULL);
+	ports_cbRegister(0x300, 16, (void*)xtide_readport, NULL, (void*)xtide_writeport, NULL, NULL);
 
 	return;
 }

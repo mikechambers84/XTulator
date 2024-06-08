@@ -212,15 +212,12 @@ int machine_init_generic_xt(MACHINE_t* machine) {
 	}
 #endif
 
-#ifndef USE_DISK_HLE
-	xtide_init();
-	xtide_mount(0, "hd0.img");
-#endif
-
 	cpu_reset(&machine->CPU);
 #ifndef USE_DISK_HLE
 	//fdc_init(&fdc, &machine->CPU, &i8259, &i8237);
 	//fdc_insert(&fdc, 0, "dos622.img");
+	xtide_init();
+	xtide_mount(0, "hd0.img");
 #else
 	biosdisk_init(&machine->CPU);
 #endif
