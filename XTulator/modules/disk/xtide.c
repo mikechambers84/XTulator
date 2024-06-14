@@ -50,6 +50,8 @@ struct xtide_status_s {
 	uint8_t head;
 	uint8_t drive;
 	uint8_t drq;
+
+	uint8_t high_byte;
 } xtide_status;
 
 struct xtide_disk_s {
@@ -63,35 +65,24 @@ struct xtide_disk_s {
 	uint32_t filesize;
 } xtide_disk[2];
 
-uint8_t xtide_buf[5120];
-uint16_t xtide_buf_len = 0;
+uint8_t xtide_buf[IDE_BUF_SIZE];
+uint32_t xtide_buf_len = 0;
 
 void xtide_buf_put(uint8_t* data, uint16_t len) {
-	if ((xtide_buf_len + len) > 5120) return;
+	if ((xtide_buf_len + len) > IDE_BUF_SIZE) return;
 
 	memcpy(&xtide_buf[xtide_buf_len], data, len);
 	xtide_buf_len += len;
 }
 
-uint8_t xtide_buf_read_l() {
+uint8_t xtide_buf_read() {
 	uint8_t ret;
-	int i;
-	
+
 	if (xtide_buf_len == 0) return 0;
 
 	ret = xtide_buf[0];
-
-	return ret;
-}
-
-uint8_t xtide_buf_read_h() {
-	uint8_t ret;
-
-	if (xtide_buf_len == 0) return 0;
-
-	ret = xtide_buf[1];
-	memmove(xtide_buf, &xtide_buf[2], 5118);
-	xtide_buf_len -= 2;
+	memmove(xtide_buf, &xtide_buf[1], IDE_BUF_SIZE - 1);
+	xtide_buf_len -= 1;
 	//printf("buf len %u\n", xtide_buf_len);
 
 	if (xtide_buf_len == 0) xtide_status.drq = 0;
@@ -144,8 +135,9 @@ void xtide_identify() {
 }
 
 void xtide_read_sectors(int retry) {
-	uint32_t cyl, head, sect, numsects, lba;
+	uint32_t cyl, head, sect, numsects, lba, bufpos = 0;
 	uint8_t disk;
+	uint8_t i;
 
 	disk = xtide_status.drive;
 
@@ -158,11 +150,44 @@ void xtide_read_sectors(int retry) {
 	head = xtide_status.head;
 	sect = xtide_status.sector_num;
 
-	lba = ((uint32_t)cyl * (uint32_t)xtide_disk[disk].heads + (uint32_t)head) * (uint32_t)xtide_disk[disk].sectors + (uint32_t)sect;
-	printf("disk read: cyl %lu, head %lu, sect %lu (%u multiple)\n", cyl, head, sect, xtide_status.sector_count);
+	lba = ((uint32_t)cyl * (uint32_t)xtide_disk[disk].heads + (uint32_t)head) * (uint32_t)xtide_disk[disk].sectors + (uint32_t)sect - 1;
+	printf("disk read: cyl %lu, head %lu, sect %lu... LBA %lu (%u multiple)\n", cyl, head, sect, lba, xtide_status.sector_count);
 	fseek(xtide_disk[disk].filehandle, lba * 512UL, SEEK_SET);
-	fread(xtide_buf, 1, 512, xtide_disk[disk].filehandle);
-	xtide_buf_len = 512;
+	xtide_buf_len = 0;
+	for (i = 0; i < xtide_status.sector_count; i++) {
+		fread(&xtide_buf[bufpos], 1, 512, xtide_disk[disk].filehandle);
+		xtide_buf_len += 512;
+		bufpos += 512;
+	}
+	xtide_status.err = 0;
+	xtide_status.drq = 1;
+}
+
+void xtide_write_sectors(int retry) {
+	uint32_t cyl, head, sect, numsects, lba, bufpos = 0;
+	uint8_t disk;
+	uint8_t i;
+
+	disk = xtide_status.drive;
+
+	if (xtide_disk[disk].mounted == 0) {
+		xtide_status.err = 1;
+		return;
+	}
+
+	cyl = (uint32_t)xtide_status.cyl_low | ((uint32_t)xtide_status.cyl_high << 8);
+	head = xtide_status.head;
+	sect = xtide_status.sector_num;
+
+	lba = ((uint32_t)cyl * (uint32_t)xtide_disk[disk].heads + (uint32_t)head) * (uint32_t)xtide_disk[disk].sectors + (uint32_t)sect - 1;
+	printf("disk read: cyl %lu, head %lu, sect %lu... LBA %lu (%u multiple)\n", cyl, head, sect, lba, xtide_status.sector_count);
+	fseek(xtide_disk[disk].filehandle, lba * 512UL, SEEK_SET);
+	xtide_buf_len = 0;
+	for (i = 0; i < xtide_status.sector_count; i++) {
+		fread(&xtide_buf[bufpos], 1, 512, xtide_disk[disk].filehandle);
+		xtide_buf_len += 512;
+		bufpos += 512;
+	}
 	xtide_status.err = 0;
 	xtide_status.drq = 1;
 }
@@ -237,11 +262,12 @@ uint8_t xtide_readport(void* dummy, uint16_t port) {
 	port &= 15;
 	switch (port) {
 	case 0: //data
-		ret = xtide_buf_read_l();
+		ret = xtide_buf_read();
+		xtide_status.high_byte = xtide_buf_read();
 		//printf("%c", ret);
 		break;
 	case 8: //data
-		ret = xtide_buf_read_h();
+		ret = xtide_status.high_byte;
 		//printf("%c", ret);
 		break;
 	case 1: //error
