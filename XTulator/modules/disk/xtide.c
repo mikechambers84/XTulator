@@ -184,7 +184,7 @@ void xtide_write_sectors(int retry) {
 	fseek(xtide_disk[disk].filehandle, lba * 512UL, SEEK_SET);
 	xtide_buf_len = 0;
 	for (i = 0; i < xtide_status.sector_count; i++) {
-		fread(&xtide_buf[bufpos], 1, 512, xtide_disk[disk].filehandle);
+		fwrite(&xtide_buf[bufpos], 1, 512, xtide_disk[disk].filehandle);
 		xtide_buf_len += 512;
 		bufpos += 512;
 	}
