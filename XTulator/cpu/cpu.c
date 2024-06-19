@@ -1113,7 +1113,7 @@ void cpu_interruptCheck(CPU_t* cpu, I8259_t* i8259) {
 void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 
 	uint32_t loopcount;
-	uint8_t docontinue;
+	uint8_t docontinue, extop;
 	static uint16_t firstip;
 
 	for (loopcount = 0; loopcount < execloops; loopcount++) {
@@ -1137,6 +1137,7 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 		docontinue = 0;
 		firstip = cpu->ip;
 
+		extop = 0;
 		while (!docontinue) {
 			cpu->segregs[regcs] = cpu->segregs[regcs] & 0xFFFF;
 			cpu->ip = cpu->ip & 0xFFFF;
@@ -1176,6 +1177,10 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 				cpu->reptype = 2;
 				break;
 
+			case 0x0F: /* Two-byte extended opcode */
+				extop = 1;
+				break;
+
 			default:
 				docontinue = 1;
 				break;
@@ -1184,7 +1189,14 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 
 		cpu->totalexec++;
 
-		switch (cpu->opcode) {
+		if (extop) {
+			debug_log(DEBUG_INFO, "Extended OP %02X\r\n", cpu->opcode);
+			switch (cpu->opcode) {
+			default:
+				exit(0);
+			}
+		}
+		else switch (cpu->opcode) {
 		case 0x0:	/* 00 ADD Eb Gb */
 			modregrm(cpu);
 			cpu->oper1b = readrm8(cpu, cpu->rm);
@@ -3261,7 +3273,7 @@ void cpu_exec(CPU_t* cpu, uint32_t execloops) {
 #ifdef CPU_ALLOW_ILLEGAL_OP_EXCEPTION
 			cpu_intcall(cpu, 6); /* trip invalid opcode exception. this occurs on the 80186+, 8086/8088 CPUs treat them as NOPs. */
 						   /* technically they aren't exactly like NOPs in most cases, but for our pursoses, that's accurate enough. */
-			debug_log(DEBUG_INFO, "[CPU] Invalid opcode exception at %04X:%04X\r\n", cpu->segregs[regcs], firstip);
+			debug_log(DEBUG_INFO, "[CPU] Invalid opcode exception at %04X:%04X (%02X)\r\n", cpu->segregs[regcs], firstip, cpu->opcode);
 #endif
 			break;
 		}

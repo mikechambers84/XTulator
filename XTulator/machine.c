@@ -63,6 +63,7 @@ const MACHINEDEF_t machine_defs[] = {
 	{ "phoenix_xt", "Pheonix XT clone", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	{ "xi8088", "Xi 8088", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	{ "zenithss", "Zenith SuperSport 8088", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
+	{ "ami286", "AMI 286 AT clone", machine_init_generic_xt, VIDEO_CARD_VGA, 16, MACHINE_HW_UART1_MOUSE },
 	{ "landmark", "Supersoft/Landmark diagnostic ROM", machine_init_generic_xt, VIDEO_CARD_CGA, 4.77, MACHINE_HW_UART1_MOUSE | MACHINE_HW_RTC },
 	{ NULL }
 };
@@ -127,6 +128,16 @@ const MACHINEMEM_t machine_mem[][10] = {
 #endif
 		{ MACHINE_MEM_RAM, 0xF0000, 0x04000, MACHINE_ROM_ISNOTROM, NULL }, //scratchpad RAM
 		{ MACHINE_MEM_ROM, 0xF8000, 0x08000, MACHINE_ROM_REQUIRED, "roms/machine/zenithss/z184m v3.1d.10d" },
+		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
+	},
+
+	//AMI 286
+	{
+		{ MACHINE_MEM_RAM, 0x00000, 0xA0000, MACHINE_ROM_ISNOTROM, NULL },
+#ifndef USE_DISK_HLE
+		{ MACHINE_MEM_ROM, 0xD0000, 0x02000, MACHINE_ROM_REQUIRED, "roms/disk/ide_xt.bin" },
+#endif
+		{ MACHINE_MEM_ROM, 0xF0000, 0x10000, MACHINE_ROM_REQUIRED, "roms/machine/ami286/2ctc001.bin" },
 		{ MACHINE_MEM_ENDLIST, 0, 0, 0, NULL }
 	},
 
